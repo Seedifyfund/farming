@@ -217,6 +217,7 @@ contract SMD_v5 is Ownable {
         uint256 rewPerBlock;
         uint256 startingBlock;
         uint256 endingBlock;
+        uint256 rewards;
     }
 
     mapping(address => Deposits) private deposits;
@@ -293,7 +294,8 @@ contract SMD_v5 is Ownable {
             accShare,
             rewPerBlock(),
             startingBlock,
-            endingBlock
+            endingBlock,
+            rewardBalance
         );
         totalReward = 0;
         stakedBalance = 0;

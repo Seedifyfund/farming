@@ -678,9 +678,9 @@ contract SMD_v5 is Ownable {
             rewardTokenAddress
         );
         require(addedRewards, "Error adding rewards");
+        endingBlock = endingBlock.add(rewardsToBeAdded.div(rewPerBlock()));
         totalReward = totalReward.add(rewardsToBeAdded);
         rewardBalance = rewardBalance.add(rewardsToBeAdded);
-        endingBlock = endingBlock.add(rewardsToBeAdded.div(rewPerBlock()));
         return true;
     }
 

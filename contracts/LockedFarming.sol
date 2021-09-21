@@ -670,7 +670,7 @@ contract SMD_v5 is Ownable {
         onlyOwner
         returns (bool)
     {
-        require(currentBlock() < endingBlock, "Period ended");
+        require(currentBlock() > startingBlock && currentBlock() < endingBlock, "Invalid period");
         require(rewardsToBeAdded > 0, "Zero rewards");
         bool addedRewards = _payMe(
             msg.sender,

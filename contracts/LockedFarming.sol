@@ -223,7 +223,7 @@ contract SMD_v5 is Ownable {
     mapping(address => Deposits) private deposits;
     mapping(address => bool) public isPaid;
     mapping(address => bool) public hasStaked;
-    mapping(uint256 => periodDetails) private endAccShare;
+    mapping(uint256 => periodDetails) public endAccShare;
 
     event Staked(
         address indexed token,
@@ -634,8 +634,10 @@ contract SMD_v5 is Ownable {
         if (deposits[from].amount == 0) {
             isPaid[from] = true;
             hasStaked[from] = false;
+            if(deposits[from].currentPeriod == period) {
+                totalParticipants = totalParticipants.sub(1);
+            }
             delete deposits[from];
-            totalParticipants = totalParticipants.sub(1);
         }
         return true;
     }

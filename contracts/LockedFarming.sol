@@ -225,6 +225,14 @@ contract SMD_v5 is Ownable {
     mapping(address => bool) public hasStaked;
     mapping(uint256 => periodDetails) public endAccShare;
 
+    event NewPeriodSet(
+        uint256 period,
+        uint256 startBlock,
+        uint256 endBlock,
+        uint256 lockDuration,
+        uint256 rewardAmount
+    );
+    event PeriodExtended(uint256 period, uint256 endBlock, uint256 rewards);
     event Staked(
         address indexed token,
         address indexed staker_,
@@ -254,11 +262,6 @@ contract SMD_v5 is Ownable {
     */
 
     function setStartEnd(uint256 _start, uint256 _end) private {
-        // require(
-        //     _start > currentBlock(),
-        //     "Start should be more than current block"
-        // );
-        // require(_end > _start, "End block should be greater than start");
         require(totalReward > 0, "Add rewards for this period");
         startingBlock = _start;
         endingBlock = _end;
@@ -272,13 +275,11 @@ contract SMD_v5 is Ownable {
         _hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
         returns (bool)
     {
-        // require(_rewardAmount > 0, "Reward must be positive");
+        totalReward = totalReward.add(_rewardAmount);
+        rewardBalance = rewardBalance.add(_rewardAmount);
         if (!_payMe(msg.sender, _rewardAmount, rewardTokenAddress)) {
             return false;
         }
-
-        totalReward = totalReward.add(_rewardAmount);
-        rewardBalance = rewardBalance.add(_rewardAmount);
         return true;
     }
 
@@ -320,6 +321,7 @@ contract SMD_v5 is Ownable {
         setStartEnd(_start, _end);
         lockDuration = _lockDuration;
         totalParticipants = 0;
+        emit NewPeriodSet(period, _start, _end, _lockDuration, _rewardAmount);
         return true;
     }
 
@@ -381,10 +383,6 @@ contract SMD_v5 is Ownable {
         updateShare();
 
         if (!hasStaked[from]) {
-            if (!_payMe(from, amount, tokenAddress)) {
-                return false;
-            }
-
             deposits[from] = Deposits(
                 amount,
                 block.number,
@@ -392,14 +390,15 @@ contract SMD_v5 is Ownable {
                 accShare,
                 period
             );
-
-            emit Staked(tokenAddress, from, amount);
-
             stakedBalance = stakedBalance.add(amount);
             stakedTotal = stakedTotal.add(amount);
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
             isPaid[from] = false;
+            if (!_payMe(from, amount, tokenAddress)) {
+                return false;
+            }
+            emit Staked(tokenAddress, from, amount);
             return true;
         } else {
             if (deposits[from].currentPeriod != period) {
@@ -408,10 +407,6 @@ contract SMD_v5 is Ownable {
             } else {
                 bool claim = _claimRewards(from);
                 require(claim, "Error paying rewards");
-            }
-
-            if (!_payMe(from, amount, tokenAddress)) {
-                return false;
             }
 
             uint256 userAmount = deposits[from].amount;
@@ -424,11 +419,15 @@ contract SMD_v5 is Ownable {
                 period
             );
 
-            emit Staked(tokenAddress, from, amount);
-
             stakedBalance = stakedBalance.add(amount);
             stakedTotal = stakedTotal.add(amount);
             isPaid[from] = false;
+
+            if (!_payMe(from, amount, tokenAddress)) {
+                return false;
+            }
+
+            emit Staked(tokenAddress, from, amount);
             return true;
         }
     }
@@ -634,7 +633,7 @@ contract SMD_v5 is Ownable {
         if (deposits[from].amount == 0) {
             isPaid[from] = true;
             hasStaked[from] = false;
-            if(deposits[from].currentPeriod == period) {
+            if (deposits[from].currentPeriod == period) {
                 totalParticipants = totalParticipants.sub(1);
             }
             delete deposits[from];
@@ -672,7 +671,10 @@ contract SMD_v5 is Ownable {
         onlyOwner
         returns (bool)
     {
-        require(currentBlock() > startingBlock && currentBlock() < endingBlock, "Invalid period");
+        require(
+            currentBlock() > startingBlock && currentBlock() < endingBlock,
+            "Invalid period"
+        );
         require(rewardsToBeAdded > 0, "Zero rewards");
         bool addedRewards = _payMe(
             msg.sender,
@@ -683,6 +685,7 @@ contract SMD_v5 is Ownable {
         endingBlock = endingBlock.add(rewardsToBeAdded.div(rewPerBlock()));
         totalReward = totalReward.add(rewardsToBeAdded);
         rewardBalance = rewardBalance.add(rewardsToBeAdded);
+        emit PeriodExtended(period, endingBlock, rewardsToBeAdded);
         return true;
     }
 

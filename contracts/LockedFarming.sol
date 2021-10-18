@@ -346,7 +346,6 @@ contract SMD_v5 is Ownable {
 
     function stake(uint256 amount)
         external
-        _realAddress(msg.sender)
         _hasAllowance(msg.sender, amount, tokenAddress)
         returns (bool)
     {
@@ -577,11 +576,7 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
-    function emergencyWithdraw()
-        external
-        _realAddress(msg.sender)
-        returns (bool)
-    {
+    function emergencyWithdraw() external returns (bool) {
         require(
             currentBlock() >
                 deposits[msg.sender].initialStake.add(
@@ -613,11 +608,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    function withdraw(uint256 amount)
-        external
-        _realAddress(msg.sender)
-        returns (bool)
-    {
+    function withdraw(uint256 amount) external returns (bool) {
         require(
             currentBlock() >
                 deposits[msg.sender].initialStake.add(
@@ -701,11 +692,6 @@ contract SMD_v5 is Ownable {
         ERC20Interface = IERC20(token);
         ERC20Interface.safeTransfer(to, amount);
         return true;
-    }
-
-    modifier _realAddress(address addr) {
-        require(addr != address(0), "Zero address");
-        _;
     }
 
     modifier _hasAllowance(

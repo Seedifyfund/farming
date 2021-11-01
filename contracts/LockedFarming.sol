@@ -432,7 +432,7 @@ contract SMD_v5 is Ownable {
         );
         uint256 userAmount = deposits[from].amount;
         require(userAmount > 0, "No stakes available for user"); //extra check
-        return (userAmount.mul(10000).div(stakedBalance)); //returns percentage upto 2 decimals
+        return (userAmount.mul(10 ** 54).div(stakedBalance)); //returns percentage upto 2 decimals
     }
 
     function claimRewards() public returns (bool) {

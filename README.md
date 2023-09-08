@@ -1,5 +1,9 @@
 # Farming Contract
 
+## TODO
+- [ ] Deploy on ARB Goerli
+- [ ] Once all are tested on testnet, deploy on mainnet
+
 ## Testnet
 
 ### Farming

@@ -4,7 +4,11 @@
 
 ### Farming
 
+For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same addres. This will avoid opening a new pool on testnet and any user can mint any amount of tokens.
+
 - BSC: https://testnet.bscscan.com/address/0xe9f459266ac5f254d287fa7e9f6803749995e668#code
+
+- Sepolia: https://sepolia.etherscan.io/address/0x53861a3EBD584Dc4A626F6284613546e1cA569aB#code
 
 ### Test Token
 

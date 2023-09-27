@@ -1,5 +1,7 @@
 # Farming Contract
 
+Based on `zok-prelim-report` - audited from this hash `e71fd388f041a46dd18bcfdf34be6ca563c58b79` and deployed on BSC mainnet already.
+
 ## TODO
 - [ ] Deploy on ARB Goerli
 - [ ] Once all are tested on testnet, deploy on mainnet

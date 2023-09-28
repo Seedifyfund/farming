@@ -3,10 +3,29 @@
 Based on `zok-prelim-report` - audited from this hash `e71fd388f041a46dd18bcfdf34be6ca563c58b79` and deployed on BSC mainnet already.
 
 ## TODO
-- [ ] Deploy on ARB Goerli
+
+- [x] Deploy on ARB Goerli
 - [ ] Once all are tested on testnet, deploy on mainnet
 
 ## Testnet
+
+### Reward Configuration
+
+To set farming rewards call:
+
+```solidity
+ function resetAndsetStartEndBlock(
+        uint256 _rewardAmount,
+        uint256 _start,
+        uint256 _end,
+        uint256 _lockDuration
+) external onlyOwner returns (bool)
+```
+
+- `_rewardAmount`: amount of reward that will be used from `msg.sender` - rewards saty in `msg.sender` wallet so ensure you have approved farming contract to spend your tokens.
+- `_start`: block number when farming starts - changes according to which network you are on.
+- `_end`: block number when farming ends - changes according to which network you are on.
+- `_lockDuration`: how long the reward will be locked after farming ends - always expressed in hours, which means as solidity does not support decimals the lower you can go is 1h.
 
 ### Farming
 

@@ -38,7 +38,11 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 - ARB Goerli: https://goerli.arbiscan.io/address/0x31b77485BD9fB21f4Cbd96D5Cd318f4019C032a9#code
 
 - Arbitrum mainnet test: https://arbiscan.io/address/0x8b943899f4216092cE2973476b079a5a78a0F3D6#code
+
   - `resetAndSetStratEndBlock`: lockDuration: `12` (approximately 1h - should have been `11.5384615385`)
+
+- Ethereum mainnet test: https://etherscan.io/address/0x55560FBfF60FB3409d21Dd86dF9eD364bEA39fbf#code
+  - `resetAndSetStratEndBlock`: lockDuration: `1` (exactly 3h - can not go lower as decimals not handled)
 
 ### Test Token
 
@@ -49,7 +53,14 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 - ARB Goerli: https://goerli.arbiscan.io/address/0x2B7CCBA0225bA5104973821e52C971C0d5882BaA#code
 
 - Arb mainnet (testing purposes):
+
   - MCKT token: https://arbiscan.io/address/0x2B7CCBA0225bA5104973821e52C971C0d5882BaA
   - Liquidity pool:
     - https://arbiscan.io/tx/0xcd9c8410a83f09ea79989658e7a6ef5aa661d426086ce8d80bc38bee392304a8
     - CMLT-LP: https://arbiscan.io/token/0x395e24b1ebfa15d2652193133151cc8987c8d27e
+
+- Ethereum mainnet (testing purposes):
+  - MCKT token: https://etherscan.io/address/0x126E4dcd47c00054f367345202de31dB570Fe2a7#code
+  - Liquidity pool:
+    - https://etherscan.io/tx/0xa4580b67cb2778b5bd93a41adb72393f5c228e8312ff8826c64c679f6e092087
+    - UNI-LP: https://etherscan.io/address/0x619391ba76b316fc56bc50388b90d9c8f24fcfe7

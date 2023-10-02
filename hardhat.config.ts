@@ -14,6 +14,7 @@ const BSC_RPC = process.env.BSC_RPC;
 const BSC_KEY = process.env.BSC_KEY;
 
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC;
+const ETH_RPC = process.env.ETH_RPC;
 const ETH_KEY = process.env.ETH_KEY;
 
 const ARB_RPC = process.env.ARB_RPC;
@@ -30,6 +31,11 @@ const config: HardhatUserConfig = {
     arb: {
       url: ARB_MAIN_RPC,
       chainId: 42161,
+      accounts: { mnemonic },
+    },
+    eth: {
+      url: ETH_RPC,
+      chainId: 1,
       accounts: { mnemonic },
     },
     bscTest: {
@@ -52,7 +58,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: ARB_KEY,
+    apiKey: ETH_KEY,
   },
   solidity: {
     compilers: [

@@ -37,6 +37,9 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 
 - ARB Goerli: https://goerli.arbiscan.io/address/0x31b77485BD9fB21f4Cbd96D5Cd318f4019C032a9#code
 
+- Arbitrum mainnet test: https://arbiscan.io/address/0x8b943899f4216092cE2973476b079a5a78a0F3D6#code
+  - `resetAndSetStratEndBlock`: lockDuration: `12` (approximately 1h - should have been `11.5384615385`)
+
 ### Test Token
 
 - BSC: https://testnet.bscscan.com/address/0x0a0fDa2921EC382b7D43e8A2Bb3524a941C767bb#code
@@ -44,3 +47,9 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 - Sepolia: https://sepolia.etherscan.io/address/0x394847038eE56af38f3c73b227961a52f0b92b87#code
 
 - ARB Goerli: https://goerli.arbiscan.io/address/0x2B7CCBA0225bA5104973821e52C971C0d5882BaA#code
+
+- Arb mainnet (testing purposes):
+  - MCKT token: https://arbiscan.io/address/0x2B7CCBA0225bA5104973821e52C971C0d5882BaA
+  - Liquidity pool:
+    - https://arbiscan.io/tx/0xcd9c8410a83f09ea79989658e7a6ef5aa661d426086ce8d80bc38bee392304a8
+    - CMLT-LP: https://arbiscan.io/token/0x395e24b1ebfa15d2652193133151cc8987c8d27e

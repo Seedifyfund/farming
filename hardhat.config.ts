@@ -17,6 +17,7 @@ const SEPOLIA_RPC = process.env.SEPOLIA_RPC;
 const ETH_KEY = process.env.ETH_KEY;
 
 const ARB_RPC = process.env.ARB_RPC;
+const ARB_MAIN_RPC = process.env.ARB_MAIN_RPC;
 const ARB_KEY = process.env.ARB_KEY;
 
 const config: HardhatUserConfig = {
@@ -26,6 +27,11 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545/",
     },
     hardhat: {},
+    arb: {
+      url: ARB_MAIN_RPC,
+      chainId: 42161,
+      accounts: { mnemonic },
+    },
     bscTest: {
       url: BSC_RPC,
       chainId: 97,

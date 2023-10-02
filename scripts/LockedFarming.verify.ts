@@ -5,7 +5,7 @@ dotenv.config();
 // npx hardhat run scripts/LockedFarming.verify.ts --network bscTest
 async function main() {
   await hre.run("verify:verify", {
-    address: "0xE9f459266ac5f254d287FA7E9F6803749995e668",
+    address: "0x8b943899f4216092cE2973476b079a5a78a0F3D6",
     // see: https://hardhat.org/hardhat-runner/plugins/nomiclabs-hardhat-etherscan#using-programmatically
     constructorArguments: [process.env.TOKEN_ADDR, process.env.REW_TOKEN_ADDR],
   });

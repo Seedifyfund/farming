@@ -37,9 +37,13 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 
 - ARB Goerli: https://goerli.arbiscan.io/address/0x31b77485BD9fB21f4Cbd96D5Cd318f4019C032a9#code
 
-- Arbitrum mainnet test: https://arbiscan.io/address/0x8b943899f4216092cE2973476b079a5a78a0F3D6#code
+- Arbitrum mainnet test: https://arbiscan.io/address/0xe6C387ad3C4850b459eF1a7eb5D1FbC446371721#code
 
-  - `resetAndSetStratEndBlock`: lockDuration: `12` (approximately 1h - should have been `11.5384615385`)
+  - `resetAndSetStratEndBlock`:
+    - rewardAmount: `100_000 ether``
+    - startIn: `60`s after tx is mined
+    - endIn: `2_592_000` --> 30 days (3600 x 24 x 30) after tx is mined
+    - lockDuration: `1` hour exactly
 
 - Ethereum mainnet test: https://etherscan.io/address/0x55560FBfF60FB3409d21Dd86dF9eD364bEA39fbf#code
   - `resetAndSetStratEndBlock`: lockDuration: `1` (exactly 3h - can not go lower as decimals not handled)

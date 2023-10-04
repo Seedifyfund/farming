@@ -209,7 +209,7 @@ contract SMD_v5 is Ownable {
     struct periodDetails {
         uint256 periodCounter;
         uint256 accShare;
-        uint256 rewPerBlock;
+        uint256 rewPerSecond;
         uint256 startingDate;
         uint256 endingDate;
         uint256 rewards;
@@ -285,7 +285,7 @@ contract SMD_v5 is Ownable {
         endAccShare[periodCounter] = periodDetails(
             periodCounter,
             accShare,
-            rewPerBlock(),
+            rewPerSecond(),
             startingDate,
             endingDate,
             rewardBalance
@@ -330,15 +330,15 @@ contract SMD_v5 is Ownable {
             return;
         }
 
-        uint256 noOfBlocks;
+        uint256 secSinceLastPeriod;
 
         if (block.timestamp >= endingDate) {
-            noOfBlocks = endingDate.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = endingDate.sub(lastPeriodStartedAt);
         } else {
-            noOfBlocks = block.timestamp.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = block.timestamp.sub(lastPeriodStartedAt);
         }
 
-        uint256 rewards = noOfBlocks.mul(rewPerBlock());
+        uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         accShare = accShare.add((rewards.mul(1e6).div(stakedBalance)));
         if (block.timestamp >= endingDate) {
@@ -348,12 +348,12 @@ contract SMD_v5 is Ownable {
         }
     }
 
-    function rewPerBlock() public view returns (uint256) {
+    function rewPerSecond() public view returns (uint256) {
         if (totalReward == 0 || rewardBalance == 0) return 0;
-        uint256 rewardperBlock = totalReward.div(
+        uint256 rewardPerSecond = totalReward.div(
             (endingDate.sub(startingDate))
         );
-        return (rewardperBlock);
+        return (rewardPerSecond);
     }
 
     function stake(uint256 amount)
@@ -569,15 +569,15 @@ contract SMD_v5 is Ownable {
             return 0;
         }
 
-        uint256 noOfBlocks;
+        uint256 secSinceLastPeriod;
 
         if (block.timestamp >= endingDate) {
-            noOfBlocks = endingDate.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = endingDate.sub(lastPeriodStartedAt);
         } else {
-            noOfBlocks = block.timestamp.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = block.timestamp.sub(lastPeriodStartedAt);
         }
 
-        uint256 rewards = noOfBlocks.mul(rewPerBlock());
+        uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         uint256 newAccShare = currentAccShare.add(
             (rewards.mul(1e6).div(stakedBalance))
@@ -659,7 +659,7 @@ contract SMD_v5 is Ownable {
             rewardTokenAddress
         );
         require(addedRewards, "Error adding rewards");
-        endingDate = endingDate.add(rewardsToBeAdded.div(rewPerBlock()));
+        endingDate = endingDate.add(rewardsToBeAdded.div(rewPerSecond()));
         totalReward = totalReward.add(rewardsToBeAdded);
         rewardBalance = rewardBalance.add(rewardsToBeAdded);
         emit PeriodExtended(periodCounter, endingDate, rewardsToBeAdded);

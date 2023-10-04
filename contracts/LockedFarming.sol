@@ -206,7 +206,7 @@ contract SMD_v5 is Ownable {
         uint256 currentPeriod;
     }
 
-    struct periodDetails {
+    struct PeriodDetails {
         uint256 periodCounter;
         uint256 accShare;
         uint256 rewPerSecond;
@@ -218,7 +218,7 @@ contract SMD_v5 is Ownable {
     mapping(address => Deposits) private deposits;
     mapping(address => bool) public isPaid;
     mapping(address => bool) public hasStaked;
-    mapping(uint256 => periodDetails) public endAccShare;
+    mapping(uint256 => PeriodDetails) public endAccShare;
 
     event NewPeriodSet(
         uint256 periodCounter,
@@ -282,7 +282,7 @@ contract SMD_v5 is Ownable {
     function reset() private {
         require(block.timestamp > endingDate, "Wait till end of this period");
         updateShare();
-        endAccShare[periodCounter] = periodDetails(
+        endAccShare[periodCounter] = PeriodDetails(
             periodCounter,
             accShare,
             rewPerSecond(),

@@ -181,7 +181,13 @@ contract SMD_v5 is Ownable {
     uint256 public startingDate;
     /// @dev expressed in UNIX timestamp. Will be compareed to block.timestamp
     uint256 public endingDate;
-    uint256 public period;
+    /**
+      * @notice periodCounter is used to keep track of the farming periods, which allow participants to
+      *         earn a certain amount of rewards by staking their LP for a certain period of time. Then, 
+      *         a new period can be opened with a different or equal amount to earn.
+      * @dev counts the amount of farming periods
+      */
+    uint256 public periodCounter;
     uint256 public accShare;
     uint256 public lastRewardBlock;
     uint256 public totalParticipants;
@@ -200,7 +206,7 @@ contract SMD_v5 is Ownable {
     }
 
     struct periodDetails {
-        uint256 period;
+        uint256 periodCounter;
         uint256 accShare;
         uint256 rewPerBlock;
         uint256 startingDate;
@@ -214,13 +220,13 @@ contract SMD_v5 is Ownable {
     mapping(uint256 => periodDetails) public endAccShare;
 
     event NewPeriodSet(
-        uint256 period,
+        uint256 periodCounter,
         uint256 startDate,
         uint256 endDate,
         uint256 lockDuration,
         uint256 rewardAmount
     );
-    event PeriodExtended(uint256 period, uint256 endDate, uint256 rewards);
+    event PeriodExtended(uint256 periodCounter, uint256 endDate, uint256 rewards);
     event Staked(
         address indexed token,
         address indexed staker_,
@@ -243,14 +249,14 @@ contract SMD_v5 is Ownable {
     }
 
     /*
-        -   To set the start and end blocks for each period
+        -   To set the start and end blocks for each periodCounter
     */
 
     function setStartEnd(uint256 _start, uint256 _end) private {
-        require(totalReward > 0, "Add rewards for this period");
+        require(totalReward > 0, "Add rewards for this periodCounter");
         startingDate = _start;
         endingDate = _end;
-        period++;
+        periodCounter++;
         isPaused = false;
         lastRewardBlock = _start;
     }
@@ -269,14 +275,14 @@ contract SMD_v5 is Ownable {
     }
 
     /*
-        -   To reset the contract at the end of each period.
+        -   To reset the contract at the end of each periodCounter.
     */
 
     function reset() private {
         require(block.number > endingDate, "Wait till end of this period");
         updateShare();
-        endAccShare[period] = periodDetails(
-            period,
+        endAccShare[periodCounter] = periodDetails(
+            periodCounter,
             accShare,
             rewPerBlock(),
             startingDate,
@@ -306,7 +312,7 @@ contract SMD_v5 is Ownable {
         setStartEnd(_start, _end);
         lockDuration = _lockDuration;
         totalParticipants = 0;
-        emit NewPeriodSet(period, _start, _end, _lockDuration, _rewardAmount);
+        emit NewPeriodSet(periodCounter, _start, _end, _lockDuration, _rewardAmount);
         return true;
     }
 
@@ -357,7 +363,7 @@ contract SMD_v5 is Ownable {
         require(!isPaused, "Contract is paused");
         require(
             block.number >= startingDate && block.number < endingDate,
-            "Invalid period"
+            "No active pool (time)"
         );
         require(amount > 0, "Can't stake 0 amount");
         return (_stake(msg.sender, amount));
@@ -372,12 +378,12 @@ contract SMD_v5 is Ownable {
                 block.number,
                 block.number,
                 accShare,
-                period
+                periodCounter
             );
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
         } else {
-            if (deposits[from].currentPeriod != period) {
+            if (deposits[from].currentPeriod != periodCounter) {
                 bool renew_ = _renew(from);
                 require(renew_, "Error renewing");
             } else {
@@ -392,7 +398,7 @@ contract SMD_v5 is Ownable {
                 block.number,
                 block.number,
                 accShare,
-                period
+                periodCounter
             );
         }
         stakedBalance = stakedBalance.add(amount);
@@ -432,8 +438,8 @@ contract SMD_v5 is Ownable {
             return 0;
         }
         require(
-            deposits[from].currentPeriod == period,
-            "Please renew in the active valid period"
+            deposits[from].currentPeriod == periodCounter,
+            "Please renew in the active valid periodCounter"
         );
         uint256 userAmount = deposits[from].amount;
         require(userAmount > 0, "No stakes available for user"); //extra check
@@ -466,7 +472,7 @@ contract SMD_v5 is Ownable {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
         require(
-            deposits[msg.sender].currentPeriod != period,
+            deposits[msg.sender].currentPeriod != periodCounter,
             "Already renewed"
         );
         require(
@@ -482,7 +488,7 @@ contract SMD_v5 is Ownable {
             bool claimed = claimOldRewards();
             require(claimed, "Error paying old rewards");
         }
-        deposits[from].currentPeriod = period;
+        deposits[from].currentPeriod = periodCounter;
         deposits[from].initialStake = block.number;
         deposits[from].latestClaim = block.number;
         deposits[from].userAccShare = accShare;
@@ -495,7 +501,7 @@ contract SMD_v5 is Ownable {
         require(!isPaused, "Contract paused");
         require(hasStaked[from], "No stakings found, please stake");
 
-        if (deposits[from].currentPeriod == period) {
+        if (deposits[from].currentPeriod == periodCounter) {
             return 0;
         }
 
@@ -519,7 +525,7 @@ contract SMD_v5 is Ownable {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
         require(
-            deposits[msg.sender].currentPeriod != period,
+            deposits[msg.sender].currentPeriod != periodCounter,
             "Already renewed"
         );
 
@@ -597,7 +603,7 @@ contract SMD_v5 is Ownable {
     function _withdraw(address from, uint256 amount) private returns (bool) {
         updateShare();
         deposits[from].amount = deposits[from].amount.sub(amount);
-        if (!isPaused && deposits[from].currentPeriod == period) {
+        if (!isPaused && deposits[from].currentPeriod == periodCounter) {
             stakedBalance = stakedBalance.sub(amount);
         }
         bool paid = _payDirect(from, amount, tokenAddress);
@@ -605,7 +611,7 @@ contract SMD_v5 is Ownable {
         if (deposits[from].amount == 0) {
             isPaid[from] = true;
             hasStaked[from] = false;
-            if (deposits[from].currentPeriod == period) {
+            if (deposits[from].currentPeriod == periodCounter) {
                 totalParticipants = totalParticipants.sub(1);
             }
             delete deposits[from];
@@ -622,7 +628,7 @@ contract SMD_v5 is Ownable {
             "Can't withdraw before lock duration"
         );
         require(amount <= deposits[msg.sender].amount, "Wrong value");
-        if (deposits[msg.sender].currentPeriod == period) {
+        if (deposits[msg.sender].currentPeriod == periodCounter) {
             if (calculate(msg.sender) > 0) {
                 bool rewardsPaid = claimRewards();
                 require(rewardsPaid, "Error paying rewards");
@@ -643,7 +649,7 @@ contract SMD_v5 is Ownable {
     {
         require(
             block.timestamp > startingDate && block.timestamp < endingDate,
-            "Invalid period"
+            "No active pool (time)"
         );
         require(rewardsToBeAdded > 0, "Zero rewards");
         bool addedRewards = _payMe(
@@ -655,7 +661,7 @@ contract SMD_v5 is Ownable {
         endingDate = endingDate.add(rewardsToBeAdded.div(rewPerBlock()));
         totalReward = totalReward.add(rewardsToBeAdded);
         rewardBalance = rewardBalance.add(rewardsToBeAdded);
-        emit PeriodExtended(period, endingDate, rewardsToBeAdded);
+        emit PeriodExtended(periodCounter, endingDate, rewardsToBeAdded);
         return true;
     }
 

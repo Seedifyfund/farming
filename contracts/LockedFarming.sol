@@ -168,6 +168,8 @@ contract SMD_v5 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    uint256 public constant SECONDS_PER_HOUR = 3600;
+
     address public tokenAddress;
     address public rewardTokenAddress;
     uint256 public stakedTotal;
@@ -175,12 +177,15 @@ contract SMD_v5 is Ownable {
     uint256 public rewardBalance;
     uint256 public totalReward;
 
+    /// @dev expressed in UNIX timestamp. Will be compareed to block.timestamp
     uint256 public startingDate;
+    /// @dev expressed in UNIX timestamp. Will be compareed to block.timestamp
     uint256 public endingDate;
     uint256 public period;
     uint256 public accShare;
     uint256 public lastRewardBlock;
     uint256 public totalParticipants;
+    /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168
     uint256 public lockDuration;
     bool public isPaused;
 
@@ -290,8 +295,8 @@ contract SMD_v5 is Ownable {
         uint256 _lockDuration
     ) external onlyOwner returns (bool) {
         require(
-            _start > currentBlock(),
-            "Start should be more than current block"
+            _start > block.timestamp,
+            "Start should be more than block.timestamp"
         );
         require(_end > _start, "End block should be greater than start");
         require(_rewardAmount > 0, "Reward must be positive");
@@ -578,9 +583,9 @@ contract SMD_v5 is Ownable {
 
     function emergencyWithdraw() external returns (bool) {
         require(
-            currentBlock() >
+            block.timestamp >
                 deposits[msg.sender].initialStake.add(
-                    lockDuration.mul(blocksPerHour)
+                    lockDuration.mul(SECONDS_PER_HOUR)
                 ),
             "Can't withdraw before lock duration"
         );
@@ -610,9 +615,9 @@ contract SMD_v5 is Ownable {
 
     function withdraw(uint256 amount) external returns (bool) {
         require(
-            currentBlock() >
+            block.timestamp >
                 deposits[msg.sender].initialStake.add(
-                    lockDuration.mul(blocksPerHour)
+                    lockDuration.mul(SECONDS_PER_HOUR)
                 ),
             "Can't withdraw before lock duration"
         );
@@ -637,7 +642,7 @@ contract SMD_v5 is Ownable {
         returns (bool)
     {
         require(
-            currentBlock() > startingDate && currentBlock() < endingDate,
+            block.timestamp > startingDate && block.timestamp < endingDate,
             "Invalid period"
         );
         require(rewardsToBeAdded > 0, "Zero rewards");
@@ -652,10 +657,6 @@ contract SMD_v5 is Ownable {
         rewardBalance = rewardBalance.add(rewardsToBeAdded);
         emit PeriodExtended(period, endingDate, rewardsToBeAdded);
         return true;
-    }
-
-    function currentBlock() public view returns (uint256) {
-        return (block.number);
     }
 
     function _payMe(

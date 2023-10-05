@@ -9,6 +9,10 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+/**
+ * @title Farming
+ * @notice Seedify's farming contract: stake LP token and earn rewards.
+ */
 contract SMD_v5 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -64,8 +68,7 @@ contract SMD_v5 is Ownable {
     bool public isPaused;
 
     /// @notice should be the last transfered token which is either {tokenAddress} or {rewardTokenAddress}.
-    /// @dev could maybe be internal or private.
-    IERC20 public ERC20Interface;
+    IERC20 internal _erc20Interface;
 
     /**
      * @notice struct which should represent the deposit made by a wallet based on all period if the wallet
@@ -157,7 +160,7 @@ contract SMD_v5 is Ownable {
         -   To set the start and end blocks for each periodCounter
     */
 
-    function setStartEnd(uint256 _start, uint256 _end) private {
+    function __setStartEnd(uint256 _start, uint256 _end) private {
         require(totalReward > 0, "Add rewards for this periodCounter");
         startingDate = _start;
         endingDate = _end;
@@ -171,14 +174,14 @@ contract SMD_v5 is Ownable {
      *         `msg.sender` wallet, so be sure `msg.sender` has approved the this contract to transfer
      *         the `_rewardAmount` of `rewardTokenAddress`.
      */
-    function addReward(uint256 _rewardAmount)
+    function __addReward(uint256 _rewardAmount)
         private
-        _hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
+        hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
         returns (bool)
     {
         totalReward = totalReward.add(_rewardAmount);
         rewardBalance = rewardBalance.add(_rewardAmount);
-        if (!_payMe(msg.sender, _rewardAmount, rewardTokenAddress)) {
+        if (!__payMe(msg.sender, _rewardAmount, rewardTokenAddress)) {
             return false;
         }
         return true;
@@ -188,9 +191,9 @@ contract SMD_v5 is Ownable {
         -   To reset the contract at the end of each periodCounter.
     */
 
-    function reset() private {
+    function __reset() private {
         require(block.timestamp > endingDate, "Wait till end of this period");
-        updateShare();
+        __updateShare();
         endAccShare[periodCounter] = PeriodDetails(
             periodCounter,
             accShare,
@@ -228,10 +231,10 @@ contract SMD_v5 is Ownable {
         );
         require(_end > _start, "End block should be greater than start");
         require(_rewardAmount > 0, "Reward must be positive");
-        reset();
-        bool rewardAdded = addReward(_rewardAmount);
+        __reset();
+        bool rewardAdded = __addReward(_rewardAmount);
         require(rewardAdded, "Rewards error");
-        setStartEnd(_start, _end);
+        __setStartEnd(_start, _end);
         lockDuration = _lockDuration;
         totalParticipants = 0;
         emit NewPeriodSet(periodCounter, _start, _end, _lockDuration, _rewardAmount);
@@ -242,7 +245,7 @@ contract SMD_v5 is Ownable {
         -   Function to update rewards and state parameters
     */
 
-    function updateShare() private {
+    function __updateShare() private {
         if (block.timestamp <= lastPeriodStartedAt) {
             return;
         }
@@ -279,7 +282,7 @@ contract SMD_v5 is Ownable {
 
     function stake(uint256 amount)
         external
-        _hasAllowance(msg.sender, amount, tokenAddress)
+        hasAllowance(msg.sender, amount, tokenAddress)
         returns (bool)
     {
         require(!isPaused, "Contract is paused");
@@ -288,11 +291,11 @@ contract SMD_v5 is Ownable {
             "No active pool (time)"
         );
         require(amount > 0, "Can't stake 0 amount");
-        return (_stake(msg.sender, amount));
+        return (__stake(msg.sender, amount));
     }
 
-    function _stake(address from, uint256 amount) private returns (bool) {
-        updateShare();
+    function __stake(address from, uint256 amount) private returns (bool) {
+        __updateShare();
 
         if (!hasStaked[from]) {
             deposits[from] = Deposits(
@@ -306,10 +309,10 @@ contract SMD_v5 is Ownable {
             hasStaked[from] = true;
         } else {
             if (deposits[from].currentPeriod != periodCounter) {
-                bool renew_ = _renew(from);
+                bool renew_ = __renew(from);
                 require(renew_, "Error renewing");
             } else {
-                bool claim = _claimRewards(from);
+                bool claim = __claimRewards(from);
                 require(claim, "Error paying rewards");
             }
 
@@ -325,7 +328,7 @@ contract SMD_v5 is Ownable {
         }
         stakedBalance = stakedBalance.add(amount);
         stakedTotal = stakedTotal.add(amount);
-        if (!_payMe(from, amount, tokenAddress)) {
+        if (!__payMe(from, amount, tokenAddress)) {
             return false;
         }
         emit Staked(tokenAddress, from, amount);
@@ -370,12 +373,12 @@ contract SMD_v5 is Ownable {
 
     function claimRewards() public returns (bool) {
         require(fetchUserShare(msg.sender) > 0, "No stakes found for user");
-        return (_claimRewards(msg.sender));
+        return (__claimRewards(msg.sender));
     }
 
-    function _claimRewards(address from) private returns (bool) {
+    function __claimRewards(address from) private returns (bool) {
         uint256 userAccShare = deposits[from].userAccShare;
-        updateShare();
+        __updateShare();
         uint256 amount = deposits[from].amount;
         uint256 rewDebt = amount.mul(userAccShare).div(1e6);
         uint256 rew = (amount.mul(accShare).div(1e6)).sub(rewDebt);
@@ -384,7 +387,7 @@ contract SMD_v5 is Ownable {
         deposits[from].userAccShare = accShare;
         deposits[from].latestClaim = block.timestamp;
         rewardBalance = rewardBalance.sub(rew);
-        bool payRewards = _payDirect(from, rew, rewardTokenAddress);
+        bool payRewards = __payDirect(from, rew, rewardTokenAddress);
         require(payRewards, "Rewards transfer failed");
         emit PaidOut(tokenAddress, rewardTokenAddress, from, amount, rew);
         return true;
@@ -402,11 +405,11 @@ contract SMD_v5 is Ownable {
             block.timestamp > startingDate && block.timestamp < endingDate,
             "Wrong time"
         );
-        return (_renew(msg.sender));
+        return (__renew(msg.sender));
     }
 
-    function _renew(address from) private returns (bool) {
-        updateShare();
+    function __renew(address from) private returns (bool) {
+        __updateShare();
         if (viewOldRewards(from) > 0) {
             bool claimed = claimOldRewards();
             require(claimed, "Error paying old rewards");
@@ -470,7 +473,7 @@ contract SMD_v5 is Ownable {
         require(rew <= rewardBalance, "Not enough rewards");
         deposits[msg.sender].latestClaim = endAccShare[userPeriod].endingDate;
         rewardBalance = rewardBalance.sub(rew);
-        bool paidOldRewards = _payDirect(msg.sender, rew, rewardTokenAddress);
+        bool paidOldRewards = __payDirect(msg.sender, rew, rewardTokenAddress);
         require(paidOldRewards, "Error paying");
         emit PaidOut(tokenAddress, rewardTokenAddress, msg.sender, amount, rew);
         return true;
@@ -478,13 +481,13 @@ contract SMD_v5 is Ownable {
 
     function calculate(address from) public view returns (uint256) {
         if (fetchUserShare(from) == 0) return 0;
-        return (_calculate(from));
+        return (__calculate(from));
     }
 
-    function _calculate(address from) private view returns (uint256) {
+    function __calculate(address from) private view returns (uint256) {
         uint256 userAccShare = deposits[from].userAccShare;
         uint256 currentAccShare = accShare;
-        //Simulating updateShare() to calculate rewards
+        //Simulating __updateShare() to calculate rewards
         if (block.timestamp <= lastPeriodStartedAt) {
             return 0;
         }
@@ -521,16 +524,16 @@ contract SMD_v5 is Ownable {
         );
         require(hasStaked[msg.sender], "No stakes available for user");
         require(!isPaid[msg.sender], "Already Paid");
-        return (_withdraw(msg.sender, deposits[msg.sender].amount));
+        return (__withdraw(msg.sender, deposits[msg.sender].amount));
     }
 
-    function _withdraw(address from, uint256 amount) private returns (bool) {
-        updateShare();
+    function __withdraw(address from, uint256 amount) private returns (bool) {
+        __updateShare();
         deposits[from].amount = deposits[from].amount.sub(amount);
         if (!isPaused && deposits[from].currentPeriod == periodCounter) {
             stakedBalance = stakedBalance.sub(amount);
         }
-        bool paid = _payDirect(from, amount, tokenAddress);
+        bool paid = __payDirect(from, amount, tokenAddress);
         require(paid, "Error during withdraw");
         if (deposits[from].amount == 0) {
             isPaid[from] = true;
@@ -563,7 +566,7 @@ contract SMD_v5 is Ownable {
             bool oldRewardsPaid = claimOldRewards();
             require(oldRewardsPaid, "Error paying old rewards");
         }
-        return (_withdraw(msg.sender, amount));
+        return (__withdraw(msg.sender, amount));
     }
 
     function extendCurrentPeriod(uint256 rewardsToBeAdded)
@@ -576,7 +579,7 @@ contract SMD_v5 is Ownable {
             "No active pool (time)"
         );
         require(rewardsToBeAdded > 0, "Zero rewards");
-        bool addedRewards = _payMe(
+        bool addedRewards = __payMe(
             msg.sender,
             rewardsToBeAdded,
             rewardTokenAddress
@@ -589,15 +592,15 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    function _payMe(
+    function __payMe(
         address payer,
         uint256 amount,
         address token
     ) private returns (bool) {
-        return _payTo(payer, address(this), amount, token);
+        return __payTo(payer, address(this), amount, token);
     }
 
-    function _payTo(
+    function __payTo(
         address allower,
         address receiver,
         uint256 amount,
@@ -606,12 +609,12 @@ contract SMD_v5 is Ownable {
         // Request to transfer amount from the contract to receiver.
         // contract does not own the funds, so the allower must have added allowance to the contract
         // Allower is the original owner.
-        ERC20Interface = IERC20(token);
-        ERC20Interface.safeTransferFrom(allower, receiver, amount);
+        _erc20Interface = IERC20(token);
+        _erc20Interface.safeTransferFrom(allower, receiver, amount);
         return true;
     }
 
-    function _payDirect(
+    function __payDirect(
         address to,
         uint256 amount,
         address token
@@ -620,12 +623,12 @@ contract SMD_v5 is Ownable {
             token == tokenAddress || token == rewardTokenAddress,
             "Invalid token address"
         );
-        ERC20Interface = IERC20(token);
-        ERC20Interface.safeTransfer(to, amount);
+        _erc20Interface = IERC20(token);
+        _erc20Interface.safeTransfer(to, amount);
         return true;
     }
 
-    modifier _hasAllowance(
+    modifier hasAllowance(
         address allower,
         uint256 amount,
         address token
@@ -635,8 +638,8 @@ contract SMD_v5 is Ownable {
             token == tokenAddress || token == rewardTokenAddress,
             "Invalid token address"
         );
-        ERC20Interface = IERC20(token);
-        uint256 ourAllowance = ERC20Interface.allowance(allower, address(this));
+        _erc20Interface = IERC20(token);
+        uint256 ourAllowance = _erc20Interface.allowance(allower, address(this));
         require(amount <= ourAllowance, "Make sure to add enough allowance");
         _;
     }

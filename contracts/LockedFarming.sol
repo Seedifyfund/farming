@@ -33,12 +33,12 @@ contract SMD_v5 is Ownable {
     uint256 public totalReward;
 
     /** 
-     * @notice Start date of current period.
+     * @notice start date of current period.
      * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
      */
     uint256 public startingDate;
      /** 
-     * @notice End date of current period.
+     * @notice end date of current period.
      * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
      */
     uint256 public endingDate;
@@ -143,8 +143,8 @@ contract SMD_v5 is Ownable {
     );
 
     /**
-     * @dev By default the contract is paused, so the owner can set the first period without anyone staking
-     *      before it opens.
+     * @notice by default the contract is paused, so the owner can set the first period without anyone 
+     *         staking before it opens.
      * @param _tokenAddress LP token address to deposit to earn rewards.
      * @param _rewardTokenAddress token address into which rewards will be paid in.
      */
@@ -156,10 +156,13 @@ contract SMD_v5 is Ownable {
         isPaused = true;
     }
 
-    /*
-        -   To set the start and end blocks for each periodCounter
-    */
-
+    /**
+     * @notice set start and end date using UNIX timestamp.
+     * @dev also increase period counter/id and resume farming. 
+     *
+     * @param _start Seconds at which the period starts - in UNIX timestamp.
+     * @param _end Seconds at which the period ends - in UNIX timestamp.
+     */
     function __setStartEnd(uint256 _start, uint256 _end) private {
         require(totalReward > 0, "Add rewards for this periodCounter");
         startingDate = _start;
@@ -169,11 +172,7 @@ contract SMD_v5 is Ownable {
         lastPeriodStartedAt = _start;
     }
 
-    /**
-     * @notice Add rewards to the contract, without transfering them to the contract. They stay in 
-     *         `msg.sender` wallet, so be sure `msg.sender` has approved the this contract to transfer
-     *         the `_rewardAmount` of `rewardTokenAddress`.
-     */
+    /// @notice Add rewards to the contract and transfer them in it.
     function __addReward(uint256 _rewardAmount)
         private
         hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
@@ -187,10 +186,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /*
-        -   To reset the contract at the end of each periodCounter.
-    */
-
+    /// @notice save the last period details, reset the contract at the end of period and pause farming.
     function __reset() private {
         require(block.timestamp > endingDate, "Wait till end of this period");
         __updateShare();
@@ -208,11 +204,11 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice Function to set the start and end blocks for each new period and add rewards to be 
+     * @notice set the start and end blocks for each new period and add rewards to be 
      *         earned within this period. Previous period must have ended, otherwise use 
      *         {extendCurrentPeriod} to update current period.
-     * @dev Easier to pass seconds to wait until start and end of period, instead of passing the start and
-     *      end timestamp. 
+     *         also calls {__addReward} to add rewards to this contract so be sure to approve this contract
+     *         to spend your ERC20 before calling this function.
      *
      * @param _rewardAmount Amount of rewards to be earned within this period.
      * @param _start Seconds at which the period starts - in UNIX timestamp.
@@ -241,10 +237,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /*
-        -   Function to update rewards and state parameters
-    */
-
+    /// @notice update rewards and state parameters
     function __updateShare() private {
         if (block.timestamp <= lastPeriodStartedAt) {
             return;
@@ -272,6 +265,7 @@ contract SMD_v5 is Ownable {
         }
     }
 
+    /// @notice calculate rewards to get per second for current period.
     function rewPerSecond() public view returns (uint256) {
         if (totalReward == 0 || rewardBalance == 0) return 0;
         uint256 rewardPerSecond = totalReward.div(
@@ -296,7 +290,7 @@ contract SMD_v5 is Ownable {
 
     function __stake(address from, uint256 amount) private returns (bool) {
         __updateShare();
-
+        // if never staked, create new deposit
         if (!hasStaked[from]) {
             deposits[from] = Deposits(
                 amount,
@@ -307,11 +301,16 @@ contract SMD_v5 is Ownable {
             );
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
-        } else {
+        } 
+        // otherwise update deposit details and claim pending rewards
+        else {
+            // if user has staked in previous period, renew and claim rewards from previous period
             if (deposits[from].currentPeriod != periodCounter) {
                 bool renew_ = __renew(from);
                 require(renew_, "Error renewing");
-            } else {
+            } 
+            // otherwise on each new stake claim pending rewards of current
+            else {
                 bool claim = __claimRewards(from);
                 require(claim, "Error paying rewards");
             }
@@ -335,6 +334,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
+    /// @notice get user deposit details
     function userDeposits(address from)
         external
         view
@@ -357,6 +357,7 @@ contract SMD_v5 is Ownable {
         }
     }
 
+    /// @custom:audit seems like a duplicate of {hasStaked}.
     function fetchUserShare(address from) public view returns (uint256) {
         require(hasStaked[from], "No stakes found for user");
         if (stakedBalance == 0) {
@@ -371,6 +372,7 @@ contract SMD_v5 is Ownable {
         return 1;
     }
 
+    /// @dev claim pending rewards of current period.
     function claimRewards() public returns (bool) {
         require(fetchUserShare(msg.sender) > 0, "No stakes found for user");
         return (__claimRewards(msg.sender));
@@ -423,6 +425,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
+    /// @notice get rewards from previous periods for `from` wallet.
     function viewOldRewards(address from) public view returns (uint256) {
         require(!isPaused, "Contract paused");
         require(hasStaked[from], "No stakings found, please stake");
@@ -447,7 +450,7 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
-    /// @notice Should claim rewards from previous periods.
+    /// @notice should claim pending rewards from previous periods.
     function claimOldRewards() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
@@ -479,6 +482,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
+    /// @notice should calculate current pending rewards for `from` wallet for current period.
     function calculate(address from) public view returns (uint256) {
         if (fetchUserShare(from) == 0) return 0;
         return (__calculate(from));
@@ -569,6 +573,12 @@ contract SMD_v5 is Ownable {
         return (__withdraw(msg.sender, amount));
     }
 
+    /**
+     * @notice add rewards to current period and extend its runing time.
+     * @dev running should be updated based on the amount of rewards added and current rewards per second,
+     *      e.g.: 1000 rewards per second, then if we add 1000 rewards then we increase running time by
+     *      1 second.
+     */
     function extendCurrentPeriod(uint256 rewardsToBeAdded)
         external
         onlyOwner
@@ -592,6 +602,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
+    /// @notice deposit rewards to this farming contract.
     function __payMe(
         address payer,
         uint256 amount,
@@ -600,6 +611,7 @@ contract SMD_v5 is Ownable {
         return __payTo(payer, address(this), amount, token);
     }
 
+    /// @notice should transfer rewards to farming contract.
     function __payTo(
         address allower,
         address receiver,
@@ -614,6 +626,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
+    /// @notice should pay rewards to `to` wallet and in certain case withdraw deposited LP token.
     function __payDirect(
         address to,
         uint256 amount,
@@ -628,6 +641,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
+    /// @notice check whether `allower` has approved this contract to spend at least `amount` of `token`.
     modifier hasAllowance(
         address allower,
         uint256 amount,

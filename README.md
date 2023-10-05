@@ -22,10 +22,10 @@ To set farming rewards call:
 ) external onlyOwner returns (bool)
 ```
 
-- `_rewardAmount`: amount of reward that will be used from `msg.sender` - rewards saty in `msg.sender` wallet so ensure you have approved farming contract to spend your tokens.
-- `_start`: block number when farming starts - changes according to which network you are on.
-- `_end`: block number when farming ends - changes according to which network you are on.
-- `_lockDuration`: how long the reward will be locked after farming ends - always expressed in hours, which means as solidity does not support decimals the lower you can go is 1h.
+- `_rewardAmount`: Amount of rewards to be earned within this period.
+- `_start`: Seconds at which the period starts - in UNIX timestamp.
+- `_end`: Seconds at which the period ends - in UNIX timestamp.
+- `_lockDuration`: Duration in hours to wait before being able to withdraw.
 
 ### Farming
 
@@ -41,8 +41,8 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 
   - `resetAndSetStratEndBlock`:
     - rewardAmount: `100_000 ether``
-    - startIn: `60`s after tx is mined
-    - endIn: `2_592_000` --> 30 days (3600 x 24 x 30) after tx is mined
+    - startIn: `60`s after tx is mined - **Rolled back to UNIX timestamp starting date**
+    - endIn: `2_592_000` --> 30 days (3600 x 24 x 30) after tx is mined - **Rolled back to UNIX timestamp ending date**
     - lockDuration: `1` hour exactly
 
 - Ethereum mainnet test: https://etherscan.io/address/0x55560FBfF60FB3409d21Dd86dF9eD364bEA39fbf#code

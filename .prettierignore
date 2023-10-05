@@ -1,1 +1,11 @@
-contracts/LockedFarming.sol
+abi/
+artifacts/
+cache/
+lib/
+migrations/
+node_modules/
+out/
+typechain-types/
+
+.env
+*.lock

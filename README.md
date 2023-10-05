@@ -45,8 +45,11 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
     - endIn: `2_592_000` --> 30 days (3600 x 24 x 30) after tx is mined - **Rolled back to UNIX timestamp ending date**
     - lockDuration: `1` hour exactly
 
-- Ethereum mainnet test: https://etherscan.io/address/0x55560FBfF60FB3409d21Dd86dF9eD364bEA39fbf#code
-  - `resetAndSetStratEndBlock`: lockDuration: `1` (exactly 3h - can not go lower as decimals not handled)
+- Ethereum mainnet test: https://etherscan.io/address/0x0c8da012FdcBB0c9d08531eA7Cc7330DA55e7f99#code
+  - rewardAmount: `1_000 ether`
+  - start: `1696499272` - Oct 05 2023 09:47:52 GMT
+  - end: `1699173686` - Nov 05 2023 08:41:26 GMT
+  - lockDuration: `1` hour exactly
 
 ### Test Token
 

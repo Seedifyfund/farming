@@ -21,6 +21,14 @@ const ARB_RPC = process.env.ARB_RPC;
 const ARB_MAIN_RPC = process.env.ARB_MAIN_RPC;
 const ARB_KEY = process.env.ARB_KEY;
 
+function getRemappings() {
+  return fs
+    .readFileSync("remappings.txt", "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.trim().split("="));
+}
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
@@ -71,15 +79,6 @@ const config: HardhatUserConfig = {
           },
         },
       },
-      {
-        version: "0.5.16",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 20000,
-          },
-        },
-      },
     ],
   },
   paths: {
@@ -88,6 +87,22 @@ const config: HardhatUserConfig = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  // This fully resolves paths for imports in the ./lib directory for Hardhat
+  preprocess: {
+    eachLine: (hre) => ({
+      transform: (line: string) => {
+        if (line.match(/^\s*import /i)) {
+          getRemappings().forEach(([find, replace]) => {
+            if (line.match(find)) {
+              line = line.replace(find, replace);
+            }
+          });
+        }
+        return line;
+      },
+    }),
+  },
+
   mocha: {
     timeout: 20000,
   },

@@ -22,10 +22,10 @@ To set farming rewards call:
 ) external onlyOwner returns (bool)
 ```
 
-- `_rewardAmount`: amount of reward that will be used from `msg.sender` - rewards saty in `msg.sender` wallet so ensure you have approved farming contract to spend your tokens.
-- `_start`: block number when farming starts - changes according to which network you are on.
-- `_end`: block number when farming ends - changes according to which network you are on.
-- `_lockDuration`: how long the reward will be locked after farming ends - always expressed in hours, which means as solidity does not support decimals the lower you can go is 1h.
+- `_rewardAmount`: Amount of rewards to be earned within this period.
+- `_start`: Seconds at which the period starts - in UNIX timestamp.
+- `_end`: Seconds at which the period ends - in UNIX timestamp.
+- `_lockDuration`: Duration in hours to wait before being able to withdraw.
 
 ### Farming
 
@@ -37,12 +37,19 @@ For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same 
 
 - ARB Goerli: https://goerli.arbiscan.io/address/0x31b77485BD9fB21f4Cbd96D5Cd318f4019C032a9#code
 
-- Arbitrum mainnet test: https://arbiscan.io/address/0x8b943899f4216092cE2973476b079a5a78a0F3D6#code
+- Arbitrum mainnet test: https://arbiscan.io/address/0xe6C387ad3C4850b459eF1a7eb5D1FbC446371721#code
 
-  - `resetAndSetStratEndBlock`: lockDuration: `12` (approximately 1h - should have been `11.5384615385`)
+  - `resetAndSetStratEndBlock`:
+    - rewardAmount: `100_000 ether``
+    - startIn: `60`s after tx is mined - **Rolled back to UNIX timestamp starting date**
+    - endIn: `2_592_000` --> 30 days (3600 x 24 x 30) after tx is mined - **Rolled back to UNIX timestamp ending date**
+    - lockDuration: `1` hour exactly
 
-- Ethereum mainnet test: https://etherscan.io/address/0x55560FBfF60FB3409d21Dd86dF9eD364bEA39fbf#code
-  - `resetAndSetStratEndBlock`: lockDuration: `1` (exactly 3h - can not go lower as decimals not handled)
+- Ethereum mainnet test: https://etherscan.io/address/0x0c8da012FdcBB0c9d08531eA7Cc7330DA55e7f99#code
+  - rewardAmount: `1_000 ether`
+  - start: `1696499272` - Oct 05 2023 09:47:52 GMT
+  - end: `1699173686` - Nov 05 2023 08:41:26 GMT
+  - lockDuration: `1` hour exactly
 
 ### Test Token
 

@@ -32,34 +32,34 @@ contract SMD_v5 is Ownable {
     /// @notice should be the amount of rewards for current period.
     uint256 public totalReward;
 
-    /** 
+    /**
      * @notice start date of current period.
      * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
      */
     uint256 public startingDate;
-     /** 
+    /**
      * @notice end date of current period.
      * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
      */
     uint256 public endingDate;
     /**
-      * @notice periodCounter is used to keep track of the farming periods, which allow participants to
-      *         earn a certain amount of rewards by staking their LP for a certain period of time. Then, 
-      *         a new period can be opened with a different or equal amount to earn.
-      * @dev counts the amount of farming periods.
-      */
+     * @notice periodCounter is used to keep track of the farming periods, which allow participants to
+     *         earn a certain amount of rewards by staking their LP for a certain period of time. Then,
+     *         a new period can be opened with a different or equal amount to earn.
+     * @dev counts the amount of farming periods.
+     */
     uint256 public periodCounter;
     /**
-     * @notice should be the amount of rewards per wei of deposited LP token {tokenAddress} for current 
+     * @notice should be the amount of rewards per wei of deposited LP token {tokenAddress} for current
      *         period.
      */
     uint256 public accShare;
     /// @notice timestamp of the last period start date, expressed in UNIX timestamp.
     uint256 public lastPeriodStartedAt;
     /**
-    * @notice amount of participant in current period.
-    * @dev {resetAndsetStartEndBlock} will reset this value to 0.
-    */
+     * @notice amount of participant in current period.
+     * @dev {resetAndsetStartEndBlock} will reset this value to 0.
+     */
     uint256 public totalParticipants;
     /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
     uint256 public lockDuration;
@@ -128,7 +128,11 @@ contract SMD_v5 is Ownable {
         uint256 lockDuration,
         uint256 rewardAmount
     );
-    event PeriodExtended(uint256 periodCounter, uint256 endDate, uint256 rewards);
+    event PeriodExtended(
+        uint256 periodCounter,
+        uint256 endDate,
+        uint256 rewards
+    );
     event Staked(
         address indexed token,
         address indexed staker_,
@@ -143,7 +147,7 @@ contract SMD_v5 is Ownable {
     );
 
     /**
-     * @notice by default the contract is paused, so the owner can set the first period without anyone 
+     * @notice by default the contract is paused, so the owner can set the first period without anyone
      *         staking before it opens.
      * @param _tokenAddress LP token address to deposit to earn rewards.
      * @param _rewardTokenAddress token address into which rewards will be paid in.
@@ -151,14 +155,17 @@ contract SMD_v5 is Ownable {
     constructor(address _tokenAddress, address _rewardTokenAddress) Ownable() {
         require(_tokenAddress != address(0), "Zero token address");
         tokenAddress = _tokenAddress;
-        require(_rewardTokenAddress != address(0), "Zero reward token address");
+        require(
+            _rewardTokenAddress != address(0),
+            "Zero reward token address"
+        );
         rewardTokenAddress = _rewardTokenAddress;
         isPaused = true;
     }
 
     /**
      * @notice set start and end date using UNIX timestamp.
-     * @dev also increase period counter/id and resume farming. 
+     * @dev also increase period counter/id and resume farming.
      *
      * @param _start Seconds at which the period starts - in UNIX timestamp.
      * @param _end Seconds at which the period ends - in UNIX timestamp.
@@ -173,7 +180,9 @@ contract SMD_v5 is Ownable {
     }
 
     /// @notice Add rewards to the contract and transfer them in it.
-    function __addReward(uint256 _rewardAmount)
+    function __addReward(
+        uint256 _rewardAmount
+    )
         private
         hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
         returns (bool)
@@ -204,8 +213,8 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice set the start and end blocks for each new period and add rewards to be 
-     *         earned within this period. Previous period must have ended, otherwise use 
+     * @notice set the start and end blocks for each new period and add rewards to be
+     *         earned within this period. Previous period must have ended, otherwise use
      *         {extendCurrentPeriod} to update current period.
      *         also calls {__addReward} to add rewards to this contract so be sure to approve this contract
      *         to spend your ERC20 before calling this function.
@@ -233,7 +242,13 @@ contract SMD_v5 is Ownable {
         __setStartEnd(_start, _end);
         lockDuration = _lockDuration;
         totalParticipants = 0;
-        emit NewPeriodSet(periodCounter, _start, _end, _lockDuration, _rewardAmount);
+        emit NewPeriodSet(
+            periodCounter,
+            _start,
+            _end,
+            _lockDuration,
+            _rewardAmount
+        );
         return true;
     }
 
@@ -274,11 +289,9 @@ contract SMD_v5 is Ownable {
         return (rewardPerSecond);
     }
 
-    function stake(uint256 amount)
-        external
-        hasAllowance(msg.sender, amount, tokenAddress)
-        returns (bool)
-    {
+    function stake(
+        uint256 amount
+    ) external hasAllowance(msg.sender, amount, tokenAddress) returns (bool) {
         require(!isPaused, "Contract is paused");
         require(
             block.timestamp >= startingDate && block.timestamp < endingDate,
@@ -301,14 +314,14 @@ contract SMD_v5 is Ownable {
             );
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
-        } 
+        }
         // otherwise update deposit details and claim pending rewards
         else {
             // if user has staked in previous period, renew and claim rewards from previous period
             if (deposits[from].currentPeriod != periodCounter) {
                 bool renew_ = __renew(from);
                 require(renew_, "Error renewing");
-            } 
+            }
             // otherwise on each new stake claim pending rewards of current
             else {
                 bool claim = __claimRewards(from);
@@ -335,16 +348,9 @@ contract SMD_v5 is Ownable {
     }
 
     /// @notice get user deposit details
-    function userDeposits(address from)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function userDeposits(
+        address from
+    ) external view returns (uint256, uint256, uint256, uint256) {
         if (hasStaked[from]) {
             return (
                 deposits[from].amount,
@@ -478,7 +484,13 @@ contract SMD_v5 is Ownable {
         rewardBalance = rewardBalance.sub(rew);
         bool paidOldRewards = __payDirect(msg.sender, rew, rewardTokenAddress);
         require(paidOldRewards, "Error paying");
-        emit PaidOut(tokenAddress, rewardTokenAddress, msg.sender, amount, rew);
+        emit PaidOut(
+            tokenAddress,
+            rewardTokenAddress,
+            msg.sender,
+            amount,
+            rew
+        );
         return true;
     }
 
@@ -579,11 +591,9 @@ contract SMD_v5 is Ownable {
      *      e.g.: 1000 rewards per second, then if we add 1000 rewards then we increase running time by
      *      1 second.
      */
-    function extendCurrentPeriod(uint256 rewardsToBeAdded)
-        external
-        onlyOwner
-        returns (bool)
-    {
+    function extendCurrentPeriod(
+        uint256 rewardsToBeAdded
+    ) external onlyOwner returns (bool) {
         require(
             block.timestamp > startingDate && block.timestamp < endingDate,
             "No active pool (time)"
@@ -653,7 +663,10 @@ contract SMD_v5 is Ownable {
             "Invalid token address"
         );
         _erc20Interface = IERC20(token);
-        uint256 ourAllowance = _erc20Interface.allowance(allower, address(this));
+        uint256 ourAllowance = _erc20Interface.allowance(
+            allower,
+            address(this)
+        );
         require(amount <= ourAllowance, "Make sure to add enough allowance");
         _;
     }

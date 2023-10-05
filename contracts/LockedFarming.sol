@@ -19,14 +19,24 @@ contract SMD_v5 is Ownable {
     address public tokenAddress;
     /// @notice token address to in which rewards will be paid in.
     address public rewardTokenAddress;
+    /// @notice total amount of {tokenAddress} staked in the contract over its whole existence.
     uint256 public stakedTotal;
+    /// @notice should be the amount of {tokenAddress} staked in the contract for the current period.
     uint256 public stakedBalance;
+    /// @notice should be the amount of rewards available in the contract accross all periods.
     uint256 public rewardBalance;
+    /// @notice should be the amount of rewards for current period.
     uint256 public totalReward;
 
-    /// @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
+    /** 
+     * @notice Start date of current period.
+     * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
+     */
     uint256 public startingDate;
-    /// @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
+     /** 
+     * @notice End date of current period.
+     * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
+     */
     uint256 public endingDate;
     /**
       * @notice periodCounter is used to keep track of the farming periods, which allow participants to
@@ -35,7 +45,10 @@ contract SMD_v5 is Ownable {
       * @dev counts the amount of farming periods.
       */
     uint256 public periodCounter;
-    /// @notice should be the last amount of rewards per wei of deposited LP token {tokenAddress}.
+    /**
+     * @notice should be the amount of rewards per wei of deposited LP token {tokenAddress} for current 
+     *         period.
+     */
     uint256 public accShare;
     /// @notice timestamp of the last period start date, expressed in UNIX timestamp.
     uint256 public lastPeriodStartedAt;
@@ -46,10 +59,25 @@ contract SMD_v5 is Ownable {
     uint256 public totalParticipants;
     /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
     uint256 public lockDuration;
+    /// @notice whether the farming contract is paused or not.
+    /// @dev does prevent wallets from retrieving rewards, stake, withdraw, renew and see old rewards.
     bool public isPaused;
 
+    /// @notice should be the last transfered token which is either {tokenAddress} or {rewardTokenAddress}.
+    /// @dev could maybe be internal or private.
     IERC20 public ERC20Interface;
 
+    /**
+     * @notice struct which should represent the deposit made by a wallet based on all period if the wallet
+     *         called {renew}.
+     *
+     * @param amount amount of LP {tokenAddress} deposited accross all period.
+     * @param initialStake should be the timestamp at which the wallet renewed their stake for new periods.
+     * @param latestClaim latest timestamp at which the wallet claimed their rewards.
+     * @param userAccShare should be the amount of rewards per wei of deposited LP token {tokenAddress}
+     *        accross all periods.
+     * @param currentPeriod should be the lastest periodCounter at which the wallet participated.
+     */
     struct Deposits {
         uint256 amount;
         uint256 initialStake;
@@ -58,6 +86,19 @@ contract SMD_v5 is Ownable {
         uint256 currentPeriod;
     }
 
+    /**
+     * @notice struct which should represent the details of ended periods.
+     * @dev period 0 should contain nullish values.
+     *
+     * @param periodCounter counter to track the period id.
+     * @param accShare should be the amount of rewards per wei of deposited LP token {tokenAddress} for
+                       this ended period.
+     * @param rewPerSecond should be the amount of rewards per second for this ended period.
+     * @param startingDate should be the start date of this ended period.
+     * @param endingDate should be the end date of this ended period.
+     * @param rewards should be the total amount of rewards left until this ended period, which might
+     *        include previous rewards from previous closed periods.
+     */
     struct PeriodDetails {
         uint256 periodCounter;
         uint256 accShare;
@@ -67,10 +108,14 @@ contract SMD_v5 is Ownable {
         uint256 rewards;
     }
 
+    /// @notice should be the deposit data made by a wallet for accorss period if the wallet called {renew}.
     mapping(address => Deposits) private deposits;
 
+    /// @notice whether a wallet has staked or not.
     mapping(address => bool) public isPaid;
+    /// @notice whether a wallet has staked some LP {tokenAddress} or not.
     mapping(address => bool) public hasStaked;
+    /// @notice should be the details of ended periods.
     mapping(uint256 => PeriodDetails) public endAccShare;
 
     event NewPeriodSet(
@@ -94,6 +139,12 @@ contract SMD_v5 is Ownable {
         uint256 reward_
     );
 
+    /**
+     * @dev By default the contract is paused, so the owner can set the first period without anyone staking
+     *      before it opens.
+     * @param _tokenAddress LP token address to deposit to earn rewards.
+     * @param _rewardTokenAddress token address into which rewards will be paid in.
+     */
     constructor(address _tokenAddress, address _rewardTokenAddress) Ownable() {
         require(_tokenAddress != address(0), "Zero token address");
         tokenAddress = _tokenAddress;

@@ -1,4 +1,10 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.9;
+
+/**
+ * @dev Interface of the ERC20 standard as defined in the EIP. Does not include
+ * the optional functions; to access them see `ERC20Detailed`.
+ */
 
 interface IERC20 {
     function totalSupply() external view returns (uint256);
@@ -8,19 +14,6 @@ interface IERC20 {
     function transfer(address recipient, uint256 amount)
         external
         returns (bool);
-
-    function token0() external view returns (address);
-
-    function token1() external view returns (address);
-
-    function getReserves()
-        external
-        view
-        returns (
-            uint112 reserve0,
-            uint112 reserve1,
-            uint32 blockTimestampLast
-        );
 
     function allowance(address owner, address spender)
         external
@@ -44,34 +37,9 @@ interface IERC20 {
     );
 }
 
-library SafeERC20 {
-    function safeTransfer(
-        IERC20 token,
-        address to,
-        uint256 value
-    ) internal {
-        require(token.transfer(to, value));
-    }
+// File: openzeppelin-solidity/contracts/math/SafeMath.sol
 
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        require(token.transferFrom(from, to, value));
-    }
-
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        require(token.approve(spender, value));
-    }
-}
-
-pragma solidity 0.5.16;
+pragma solidity 0.8.9;
 
 library SafeMath {
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -104,7 +72,6 @@ library SafeMath {
         require(b > 0, "SafeMath: division by zero");
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-
         return c;
     }
 
@@ -114,28 +81,21 @@ library SafeMath {
     }
 }
 
-pragma solidity 0.5.16;
+pragma solidity ^0.8.0;
 
-contract Context {
-    // Empty internal constructor, to prevent people from mistakenly deploying
-    // an instance of this contract, which should be used via inheritance.
-    constructor() internal {}
-
-    function _msgSender() internal view returns (address payable) {
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
         return msg.sender;
     }
 
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+    function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
     }
 }
 
-// File: @openzeppelin/contracts/ownership/Ownable.sol
+pragma solidity 0.8.9;
 
-pragma solidity 0.5.16;
-
-contract Ownable is Context {
+abstract contract Ownable is Context {
     address private _owner;
 
     event OwnershipTransferred(
@@ -143,44 +103,66 @@ contract Ownable is Context {
         address indexed newOwner
     );
 
-    constructor() internal {
-        _owner = _msgSender();
-        emit OwnershipTransferred(address(0), _owner);
+    constructor() {
+        _transferOwnership(_msgSender());
     }
 
-    function owner() public view returns (address) {
+    function owner() public view virtual returns (address) {
         return _owner;
     }
 
     modifier onlyOwner() {
-        require(isOwner(), "Ownable: caller is not the owner");
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
         _;
     }
 
-    function isOwner() public view returns (bool) {
-        return _msgSender() == _owner;
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
     }
 
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    function transferOwnership(address newOwner) public onlyOwner {
-        _transferOwnership(newOwner);
-    }
-
-    function _transferOwnership(address newOwner) internal {
+    function transferOwnership(address newOwner) public virtual onlyOwner {
         require(
             newOwner != address(0),
             "Ownable: new owner is the zero address"
         );
-        emit OwnershipTransferred(_owner, newOwner);
+        _transferOwnership(newOwner);
+    }
+
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
         _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
 
-pragma solidity 0.5.16;
+library SafeERC20 {
+    function safeTransfer(
+        IERC20 token,
+        address to,
+        uint256 value
+    ) internal {
+        require(token.transfer(to, value));
+    }
+
+    function safeTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        require(token.transferFrom(from, to, value));
+    }
+
+    function safeApprove(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
+        require(token.approve(spender, value));
+    }
+}
+
+pragma solidity 0.8.9;
 
 contract SMD_v5 is Ownable {
     using SafeMath for uint256;
@@ -200,6 +182,7 @@ contract SMD_v5 is Ownable {
     uint256 public totalParticipants;
     uint256 public lockDuration;
     bool public isPaused;
+    uint256 public constant blocksPerHour = 1200;
 
     IERC20 public ERC20Interface;
 
@@ -246,10 +229,7 @@ contract SMD_v5 is Ownable {
         uint256 reward_
     );
 
-    constructor(address _tokenAddress, address _rewardTokenAddress)
-        public
-        Ownable()
-    {
+    constructor(address _tokenAddress, address _rewardTokenAddress) Ownable() {
         require(_tokenAddress != address(0), "Zero token address");
         tokenAddress = _tokenAddress;
         require(_rewardTokenAddress != address(0), "Zero reward token address");
@@ -366,7 +346,6 @@ contract SMD_v5 is Ownable {
 
     function stake(uint256 amount)
         external
-        _realAddress(msg.sender)
         _hasAllowance(msg.sender, amount, tokenAddress)
         returns (bool)
     {
@@ -390,20 +369,12 @@ contract SMD_v5 is Ownable {
                 accShare,
                 period
             );
-            stakedBalance = stakedBalance.add(amount);
-            stakedTotal = stakedTotal.add(amount);
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
-            isPaid[from] = false;
-            if (!_payMe(from, amount, tokenAddress)) {
-                return false;
-            }
-            emit Staked(tokenAddress, from, amount);
-            return true;
         } else {
             if (deposits[from].currentPeriod != period) {
-                bool renew = _renew(from);
-                require(renew, "Error renewing");
+                bool renew_ = _renew(from);
+                require(renew_, "Error renewing");
             } else {
                 bool claim = _claimRewards(from);
                 require(claim, "Error paying rewards");
@@ -418,18 +389,14 @@ contract SMD_v5 is Ownable {
                 accShare,
                 period
             );
-
-            stakedBalance = stakedBalance.add(amount);
-            stakedTotal = stakedTotal.add(amount);
-            isPaid[from] = false;
-
-            if (!_payMe(from, amount, tokenAddress)) {
-                return false;
-            }
-
-            emit Staked(tokenAddress, from, amount);
-            return true;
         }
+        stakedBalance = stakedBalance.add(amount);
+        stakedTotal = stakedTotal.add(amount);
+        if (!_payMe(from, amount, tokenAddress)) {
+            return false;
+        }
+        emit Staked(tokenAddress, from, amount);
+        return true;
     }
 
     function userDeposits(address from)
@@ -449,6 +416,8 @@ contract SMD_v5 is Ownable {
                 deposits[from].latestClaim,
                 deposits[from].currentPeriod
             );
+        } else {
+            return (0, 0, 0, 0);
         }
     }
 
@@ -463,7 +432,7 @@ contract SMD_v5 is Ownable {
         );
         uint256 userAmount = deposits[from].amount;
         require(userAmount > 0, "No stakes available for user"); //extra check
-        return (userAmount.mul(10000).div(stakedBalance)); //returns percentage upto 2 decimals
+        return 1;
     }
 
     function claimRewards() public returns (bool) {
@@ -607,14 +576,12 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
-    function emergencyWithdraw()
-        external
-        _realAddress(msg.sender)
-        returns (bool)
-    {
+    function emergencyWithdraw() external returns (bool) {
         require(
             currentBlock() >
-                deposits[msg.sender].initialStake.add(lockDuration.mul(1200)),
+                deposits[msg.sender].initialStake.add(
+                    lockDuration.mul(blocksPerHour)
+                ),
             "Can't withdraw before lock duration"
         );
         require(hasStaked[msg.sender], "No stakes available for user");
@@ -641,14 +608,12 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    function withdraw(uint256 amount)
-        external
-        _realAddress(msg.sender)
-        returns (bool)
-    {
+    function withdraw(uint256 amount) external returns (bool) {
         require(
             currentBlock() >
-                deposits[msg.sender].initialStake.add(lockDuration.mul(1200)),
+                deposits[msg.sender].initialStake.add(
+                    lockDuration.mul(blocksPerHour)
+                ),
             "Can't withdraw before lock duration"
         );
         require(amount <= deposits[msg.sender].amount, "Wrong value");
@@ -727,11 +692,6 @@ contract SMD_v5 is Ownable {
         ERC20Interface = IERC20(token);
         ERC20Interface.safeTransfer(to, amount);
         return true;
-    }
-
-    modifier _realAddress(address addr) {
-        require(addr != address(0), "Zero address");
-        _;
     }
 
     modifier _hasAllowance(

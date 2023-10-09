@@ -54,11 +54,11 @@ contract SMD_v5 is Ownable {
      *         period.
      */
     uint256 public accShare;
-    /// @notice timestamp of the last period start date, expressed in UNIX timestamp.
-    uint256 public lastPeriodStartedAt;
+    /// @notice timestamp of at which shares have been updated at last, expressed in UNIX timestamp.
+    uint256 public lastSharesUpdateTime;
     /**
      * @notice amount of participant in current period.
-     * @dev {resetAndsetStartEndBlock} will reset this value to 0.
+     * @dev {setNewPeriod} will reset this value to 0.
      */
     uint256 public totalParticipants;
     /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
@@ -176,7 +176,7 @@ contract SMD_v5 is Ownable {
         endingDate = _end;
         periodCounter++;
         isPaused = false;
-        lastPeriodStartedAt = _start;
+        lastSharesUpdateTime = _start;
     }
 
     /// @notice Add rewards to the contract and transfer them in it.
@@ -213,7 +213,7 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice set the start and end blocks for each new period and add rewards to be
+     * @notice set the start and end timestamp for the new period and add rewards to be
      *         earned within this period. Previous period must have ended, otherwise use
      *         {extendCurrentPeriod} to update current period.
      *         also calls {__addReward} to add rewards to this contract so be sure to approve this contract
@@ -224,7 +224,7 @@ contract SMD_v5 is Ownable {
      * @param _end Seconds at which the period ends - in UNIX timestamp.
      * @param _lockDuration Duration in hours to wait before being able to withdraw.
      */
-    function resetAndsetStartEndBlock(
+    function setNewPeriod(
         uint256 _rewardAmount,
         uint256 _start,
         uint256 _end,
@@ -252,31 +252,31 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /// @notice update rewards and state parameters
+    /// @notice update {accShare} and {lastSharesUpdateTime} for current period.
     function __updateShare() private {
-        if (block.timestamp <= lastPeriodStartedAt) {
+        if (block.timestamp <= lastSharesUpdateTime) {
             return;
         }
         if (stakedBalance == 0) {
-            lastPeriodStartedAt = block.timestamp;
+            lastSharesUpdateTime = block.timestamp;
             return;
         }
 
         uint256 secSinceLastPeriod;
 
         if (block.timestamp >= endingDate) {
-            secSinceLastPeriod = endingDate.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = endingDate.sub(lastSharesUpdateTime);
         } else {
-            secSinceLastPeriod = block.timestamp.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = block.timestamp.sub(lastSharesUpdateTime);
         }
 
         uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         accShare = accShare.add((rewards.mul(1e6).div(stakedBalance)));
         if (block.timestamp >= endingDate) {
-            lastPeriodStartedAt = endingDate;
+            lastSharesUpdateTime = endingDate;
         } else {
-            lastPeriodStartedAt = block.timestamp;
+            lastSharesUpdateTime = block.timestamp;
         }
     }
 
@@ -305,13 +305,13 @@ contract SMD_v5 is Ownable {
         __updateShare();
         // if never staked, create new deposit
         if (!hasStaked[from]) {
-            deposits[from] = Deposits(
-                amount,
-                block.timestamp,
-                block.timestamp,
-                accShare,
-                periodCounter
-            );
+            deposits[from] = Deposits({
+                amount: amount,
+                initialStake: block.timestamp,
+                latestClaim: block.timestamp,
+                userAccShare: accShare,
+                currentPeriod: periodCounter
+            });
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
         }
@@ -322,7 +322,7 @@ contract SMD_v5 is Ownable {
                 bool renew_ = __renew(from);
                 require(renew_, "Error renewing");
             }
-            // otherwise on each new stake claim pending rewards of current
+            // otherwise on each new stake claim pending rewards of current period
             else {
                 bool claim = __claimRewards(from);
                 require(claim, "Error paying rewards");
@@ -330,13 +330,13 @@ contract SMD_v5 is Ownable {
 
             uint256 userAmount = deposits[from].amount;
 
-            deposits[from] = Deposits(
-                userAmount.add(amount),
-                block.timestamp,
-                block.timestamp,
-                accShare,
-                periodCounter
-            );
+            deposits[from] = Deposits({
+                amount: userAmount.add(amount),
+                initialStake: block.timestamp,
+                latestClaim: block.timestamp,
+                userAccShare: accShare,
+                currentPeriod: periodCounter
+            });
         }
         stakedBalance = stakedBalance.add(amount);
         stakedTotal = stakedTotal.add(amount);
@@ -401,7 +401,10 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /// @notice Should take into account staking rewards from previous periods into the current new period.
+    /**
+     * @notice Should take into account farming rewards and LP staked from previous periods into the new
+     *         current period.
+     */
     function renew() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
@@ -504,7 +507,7 @@ contract SMD_v5 is Ownable {
         uint256 userAccShare = deposits[from].userAccShare;
         uint256 currentAccShare = accShare;
         //Simulating __updateShare() to calculate rewards
-        if (block.timestamp <= lastPeriodStartedAt) {
+        if (block.timestamp <= lastSharesUpdateTime) {
             return 0;
         }
         if (stakedBalance == 0) {
@@ -514,9 +517,9 @@ contract SMD_v5 is Ownable {
         uint256 secSinceLastPeriod;
 
         if (block.timestamp >= endingDate) {
-            secSinceLastPeriod = endingDate.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = endingDate.sub(lastSharesUpdateTime);
         } else {
-            secSinceLastPeriod = block.timestamp.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = block.timestamp.sub(lastSharesUpdateTime);
         }
 
         uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
@@ -669,5 +672,19 @@ contract SMD_v5 is Ownable {
         );
         require(amount <= ourAllowance, "Make sure to add enough allowance");
         _;
+    }
+
+    function recoverLostERC20(address token, address to) external onlyOwner {
+        if (token == address(0)) revert("Token_Zero_Address");
+        if (to == address(0)) revert("To_Zero_Address");
+
+        uint256 amount = IERC20(token).balanceOf(address(this));
+
+        // only retrieve lost {rewardTokenAddress}
+        if (token == rewardTokenAddress) amount -= rewardBalance;
+        // only retrieve lost LP tokens
+        if (token == tokenAddress) amount -= stakedTotal;
+
+        IERC20(token).safeTransfer(to, amount);
     }
 }

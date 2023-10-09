@@ -58,7 +58,7 @@ contract SMD_v5 is Ownable {
     uint256 public lastSharesUpdateTime;
     /**
      * @notice amount of participant in current period.
-     * @dev {resetAndsetStartEndBlock} will reset this value to 0.
+     * @dev {setNewPeriod} will reset this value to 0.
      */
     uint256 public totalParticipants;
     /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
@@ -213,7 +213,7 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice set the start and end blocks for each new period and add rewards to be
+     * @notice set the start and end timestamp for the new period and add rewards to be
      *         earned within this period. Previous period must have ended, otherwise use
      *         {extendCurrentPeriod} to update current period.
      *         also calls {__addReward} to add rewards to this contract so be sure to approve this contract
@@ -224,7 +224,7 @@ contract SMD_v5 is Ownable {
      * @param _end Seconds at which the period ends - in UNIX timestamp.
      * @param _lockDuration Duration in hours to wait before being able to withdraw.
      */
-    function resetAndsetStartEndBlock(
+    function setNewPeriod(
         uint256 _rewardAmount,
         uint256 _start,
         uint256 _end,

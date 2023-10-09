@@ -673,4 +673,18 @@ contract SMD_v5 is Ownable {
         require(amount <= ourAllowance, "Make sure to add enough allowance");
         _;
     }
+
+    function recoverLostERC20(address token, address to) external onlyOwner {
+        if (token == address(0)) revert("Token_Zero_Address");
+        if (to == address(0)) revert("To_Zero_Address");
+
+        uint256 amount = IERC20(token).balanceOf(address(this));
+
+        // only retrieve lost {rewardTokenAddress}
+        if (token == rewardTokenAddress) amount -= rewardBalance;
+        // only retrieve lost LP tokens
+        if (token == tokenAddress) amount -= stakedTotal;
+
+        IERC20(token).safeTransfer(to, amount);
+    }
 }

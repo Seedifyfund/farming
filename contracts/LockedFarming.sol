@@ -54,8 +54,8 @@ contract SMD_v5 is Ownable {
      *         period.
      */
     uint256 public accShare;
-    /// @notice timestamp of the last period start date, expressed in UNIX timestamp.
-    uint256 public lastPeriodStartedAt;
+    /// @notice timestamp of at which shares have been updated at last, expressed in UNIX timestamp.
+    uint256 public lastSharesUpdateTime;
     /**
      * @notice amount of participant in current period.
      * @dev {resetAndsetStartEndBlock} will reset this value to 0.
@@ -176,7 +176,7 @@ contract SMD_v5 is Ownable {
         endingDate = _end;
         periodCounter++;
         isPaused = false;
-        lastPeriodStartedAt = _start;
+        lastSharesUpdateTime = _start;
     }
 
     /// @notice Add rewards to the contract and transfer them in it.
@@ -254,29 +254,29 @@ contract SMD_v5 is Ownable {
 
     /// @notice update rewards and state parameters
     function __updateShare() private {
-        if (block.timestamp <= lastPeriodStartedAt) {
+        if (block.timestamp <= lastSharesUpdateTime) {
             return;
         }
         if (stakedBalance == 0) {
-            lastPeriodStartedAt = block.timestamp;
+            lastSharesUpdateTime = block.timestamp;
             return;
         }
 
         uint256 secSinceLastPeriod;
 
         if (block.timestamp >= endingDate) {
-            secSinceLastPeriod = endingDate.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = endingDate.sub(lastSharesUpdateTime);
         } else {
-            secSinceLastPeriod = block.timestamp.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = block.timestamp.sub(lastSharesUpdateTime);
         }
 
         uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         accShare = accShare.add((rewards.mul(1e6).div(stakedBalance)));
         if (block.timestamp >= endingDate) {
-            lastPeriodStartedAt = endingDate;
+            lastSharesUpdateTime = endingDate;
         } else {
-            lastPeriodStartedAt = block.timestamp;
+            lastSharesUpdateTime = block.timestamp;
         }
     }
 
@@ -504,7 +504,7 @@ contract SMD_v5 is Ownable {
         uint256 userAccShare = deposits[from].userAccShare;
         uint256 currentAccShare = accShare;
         //Simulating __updateShare() to calculate rewards
-        if (block.timestamp <= lastPeriodStartedAt) {
+        if (block.timestamp <= lastSharesUpdateTime) {
             return 0;
         }
         if (stakedBalance == 0) {
@@ -514,9 +514,9 @@ contract SMD_v5 is Ownable {
         uint256 secSinceLastPeriod;
 
         if (block.timestamp >= endingDate) {
-            secSinceLastPeriod = endingDate.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = endingDate.sub(lastSharesUpdateTime);
         } else {
-            secSinceLastPeriod = block.timestamp.sub(lastPeriodStartedAt);
+            secSinceLastPeriod = block.timestamp.sub(lastSharesUpdateTime);
         }
 
         uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());

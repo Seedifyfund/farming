@@ -252,7 +252,7 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /// @notice update rewards and state parameters
+    /// @notice update {accShare} and {lastSharesUpdateTime} for current period.
     function __updateShare() private {
         if (block.timestamp <= lastSharesUpdateTime) {
             return;
@@ -305,13 +305,13 @@ contract SMD_v5 is Ownable {
         __updateShare();
         // if never staked, create new deposit
         if (!hasStaked[from]) {
-            deposits[from] = Deposits(
-                amount,
-                block.timestamp,
-                block.timestamp,
-                accShare,
-                periodCounter
-            );
+            deposits[from] = Deposits({
+                amount: amount,
+                initialStake: block.timestamp,
+                latestClaim: block.timestamp,
+                userAccShare: accShare,
+                currentPeriod: periodCounter
+            });
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
         }
@@ -322,7 +322,7 @@ contract SMD_v5 is Ownable {
                 bool renew_ = __renew(from);
                 require(renew_, "Error renewing");
             }
-            // otherwise on each new stake claim pending rewards of current
+            // otherwise on each new stake claim pending rewards of current period
             else {
                 bool claim = __claimRewards(from);
                 require(claim, "Error paying rewards");
@@ -330,13 +330,13 @@ contract SMD_v5 is Ownable {
 
             uint256 userAmount = deposits[from].amount;
 
-            deposits[from] = Deposits(
-                userAmount.add(amount),
-                block.timestamp,
-                block.timestamp,
-                accShare,
-                periodCounter
-            );
+            deposits[from] = Deposits({
+                amount: userAmount.add(amount),
+                initialStake: block.timestamp,
+                latestClaim: block.timestamp,
+                userAccShare: accShare,
+                currentPeriod: periodCounter
+            });
         }
         stakedBalance = stakedBalance.add(amount);
         stakedTotal = stakedTotal.add(amount);
@@ -401,7 +401,10 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /// @notice Should take into account staking rewards from previous periods into the current new period.
+    /**
+     * @notice Should take into account farming rewards and LP staked from previous periods into the new
+     *         current period.
+     */
     function renew() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");

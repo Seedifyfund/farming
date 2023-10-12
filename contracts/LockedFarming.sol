@@ -1,208 +1,86 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
-    function balanceOf(address account) external view returns (uint256);
+import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeMath} from "openzeppelin-contracts/utils/math/SafeMath.sol";
 
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
+import {Context} from "openzeppelin-contracts/utils/Context.sol";
+import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 
-    function token0() external view returns (address);
-
-    function token1() external view returns (address);
-
-    function getReserves()
-        external
-        view
-        returns (
-            uint112 reserve0,
-            uint112 reserve1,
-            uint32 blockTimestampLast
-        );
-
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-}
-
-library SafeERC20 {
-    function safeTransfer(
-        IERC20 token,
-        address to,
-        uint256 value
-    ) internal {
-        require(token.transfer(to, value));
-    }
-
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        require(token.transferFrom(from, to, value));
-    }
-
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        require(token.approve(spender, value));
-    }
-}
-
-pragma solidity 0.5.16;
-
-library SafeMath {
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "SafeMath: subtraction overflow");
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Solidity only automatically asserts when dividing by 0
-        require(b > 0, "SafeMath: division by zero");
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-
-        return c;
-    }
-
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "SafeMath: modulo by zero");
-        return a % b;
-    }
-}
-
-pragma solidity 0.5.16;
-
-contract Context {
-    // Empty internal constructor, to prevent people from mistakenly deploying
-    // an instance of this contract, which should be used via inheritance.
-    constructor() internal {}
-
-    function _msgSender() internal view returns (address payable) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-
-// File: @openzeppelin/contracts/ownership/Ownable.sol
-
-pragma solidity 0.5.16;
-
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-
-    constructor() internal {
-        _owner = _msgSender();
-        emit OwnershipTransferred(address(0), _owner);
-    }
-
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    modifier onlyOwner() {
-        require(isOwner(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    function isOwner() public view returns (bool) {
-        return _msgSender() == _owner;
-    }
-
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    function transferOwnership(address newOwner) public onlyOwner {
-        _transferOwnership(newOwner);
-    }
-
-    function _transferOwnership(address newOwner) internal {
-        require(
-            newOwner != address(0),
-            "Ownable: new owner is the zero address"
-        );
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-pragma solidity 0.5.16;
-
+/**
+ * @title Farming
+ * @notice Seedify's farming contract: stake LP token and earn rewards.
+ */
 contract SMD_v5 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    uint256 public constant SECONDS_PER_HOUR = 3600; // 60 * 60
+
+    /// @notice LP token address to deposit to earn rewards.
     address public tokenAddress;
+    /// @notice token address to in which rewards will be paid in.
     address public rewardTokenAddress;
+    /// @notice total amount of {tokenAddress} staked in the contract over its whole existence.
     uint256 public stakedTotal;
+    /// @notice should be the amount of {tokenAddress} staked in the contract for the current period.
     uint256 public stakedBalance;
+    /// @notice should be the amount of rewards available in the contract accross all periods.
     uint256 public rewardBalance;
+    /// @notice should be the amount of rewards for current period.
     uint256 public totalReward;
-    uint256 public startingBlock;
-    uint256 public endingBlock;
-    uint256 public period;
+
+    /**
+     * @notice start date of current period.
+     * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
+     */
+    uint256 public startingDate;
+    /**
+     * @notice end date of current period.
+     * @dev expressed in UNIX timestamp. Will be compareed to block.timestamp.
+     */
+    uint256 public endingDate;
+    /**
+     * @notice periodCounter is used to keep track of the farming periods, which allow participants to
+     *         earn a certain amount of rewards by staking their LP for a certain period of time. Then,
+     *         a new period can be opened with a different or equal amount to earn.
+     * @dev counts the amount of farming periods.
+     */
+    uint256 public periodCounter;
+    /**
+     * @notice should be the amount of rewards per wei of deposited LP token {tokenAddress} for current
+     *         period.
+     */
     uint256 public accShare;
-    uint256 public lastRewardBlock;
+    /// @notice timestamp of at which shares have been updated at last, expressed in UNIX timestamp.
+    uint256 public lastSharesUpdateTime;
+    /**
+     * @notice amount of participant in current period.
+     * @dev {setNewPeriod} will reset this value to 0.
+     */
     uint256 public totalParticipants;
+    /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
     uint256 public lockDuration;
+    /// @notice whether the farming contract is paused or not.
+    /// @dev does prevent wallets from retrieving rewards, stake, withdraw, renew and see old rewards.
     bool public isPaused;
 
-    IERC20 public ERC20Interface;
+    /// @notice should be the last transfered token which is either {tokenAddress} or {rewardTokenAddress}.
+    IERC20 internal _erc20Interface;
 
+    /**
+     * @notice struct which should represent the deposit made by a wallet based on all period if the wallet
+     *         called {renew}.
+     *
+     * @param amount amount of LP {tokenAddress} deposited accross all period.
+     * @param initialStake should be the timestamp at which the wallet renewed their stake for new periods.
+     * @param latestClaim latest timestamp at which the wallet claimed their rewards.
+     * @param userAccShare should be the amount of rewards per wei of deposited LP token {tokenAddress}
+     *        accross all periods.
+     * @param currentPeriod should be the lastest periodCounter at which the wallet participated.
+     */
     struct Deposits {
         uint256 amount;
         uint256 initialStake;
@@ -211,28 +89,50 @@ contract SMD_v5 is Ownable {
         uint256 currentPeriod;
     }
 
-    struct periodDetails {
-        uint256 period;
+    /**
+     * @notice struct which should represent the details of ended periods.
+     * @dev period 0 should contain nullish values.
+     *
+     * @param periodCounter counter to track the period id.
+     * @param accShare should be the amount of rewards per wei of deposited LP token {tokenAddress} for
+                       this ended period.
+     * @param rewPerSecond should be the amount of rewards per second for this ended period.
+     * @param startingDate should be the start date of this ended period.
+     * @param endingDate should be the end date of this ended period.
+     * @param rewards should be the total amount of rewards left until this ended period, which might
+     *        include previous rewards from previous closed periods.
+     */
+    struct PeriodDetails {
+        uint256 periodCounter;
         uint256 accShare;
-        uint256 rewPerBlock;
-        uint256 startingBlock;
-        uint256 endingBlock;
+        uint256 rewPerSecond;
+        uint256 startingDate;
+        uint256 endingDate;
         uint256 rewards;
     }
 
+    /// @notice should be the deposit data made by a wallet for accorss period if the wallet called {renew}.
     mapping(address => Deposits) private deposits;
+
+    /// @notice whether a wallet has staked or not.
     mapping(address => bool) public isPaid;
+    /// @notice whether a wallet has staked some LP {tokenAddress} or not.
     mapping(address => bool) public hasStaked;
-    mapping(uint256 => periodDetails) public endAccShare;
+    /// @notice should be the details of ended periods.
+    mapping(uint256 => PeriodDetails) public endAccShare;
 
     event NewPeriodSet(
-        uint256 period,
-        uint256 startBlock,
-        uint256 endBlock,
+        uint256 periodCounter,
+        uint256 startDate,
+        uint256 endDate,
         uint256 lockDuration,
         uint256 rewardAmount
     );
-    event PeriodExtended(uint256 period, uint256 endBlock, uint256 rewards);
+    event PeriodExtended(
+        uint256 periodCounter,
+        uint256 endDate,
+        uint256 rewards
+    );
     event Staked(
         address indexed token,
         address indexed staker_,
@@ -246,56 +146,65 @@ contract SMD_v5 is Ownable {
         uint256 reward_
     );
 
-    constructor(address _tokenAddress, address _rewardTokenAddress)
-        public
-        Ownable()
-    {
+    /**
+     * @notice by default the contract is paused, so the owner can set the first period without anyone
+     *         staking before it opens.
+     * @param _tokenAddress LP token address to deposit to earn rewards.
+     * @param _rewardTokenAddress token address into which rewards will be paid in.
+     */
+    constructor(address _tokenAddress, address _rewardTokenAddress) Ownable() {
         require(_tokenAddress != address(0), "Zero token address");
         tokenAddress = _tokenAddress;
-        require(_rewardTokenAddress != address(0), "Zero reward token address");
+        require(
+            _rewardTokenAddress != address(0),
+            "Zero reward token address"
+        );
         rewardTokenAddress = _rewardTokenAddress;
         isPaused = true;
     }
 
-    /*
-        -   To set the start and end blocks for each period
-    */
-
-    function setStartEnd(uint256 _start, uint256 _end) private {
-        require(totalReward > 0, "Add rewards for this period");
-        startingBlock = _start;
-        endingBlock = _end;
-        period++;
+    /**
+     * @notice set start and end date using UNIX timestamp.
+     * @dev also increase period counter/id and resume farming.
+     *
+     * @param _start Seconds at which the period starts - in UNIX timestamp.
+     * @param _end Seconds at which the period ends - in UNIX timestamp.
+     */
+    function __setStartEnd(uint256 _start, uint256 _end) private {
+        require(totalReward > 0, "Add rewards for this periodCounter");
+        startingDate = _start;
+        endingDate = _end;
+        periodCounter++;
         isPaused = false;
-        lastRewardBlock = _start;
+        lastSharesUpdateTime = _start;
     }
 
-    function addReward(uint256 _rewardAmount)
+    /// @notice Add rewards to the contract and transfer them in it.
+    function __addReward(
+        uint256 _rewardAmount
+    )
         private
-        _hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
+        hasAllowance(msg.sender, _rewardAmount, rewardTokenAddress)
         returns (bool)
     {
         totalReward = totalReward.add(_rewardAmount);
         rewardBalance = rewardBalance.add(_rewardAmount);
-        if (!_payMe(msg.sender, _rewardAmount, rewardTokenAddress)) {
+        if (!__payMe(msg.sender, _rewardAmount, rewardTokenAddress)) {
             return false;
         }
         return true;
     }
 
-    /*
-        -   To reset the contract at the end of each period.
-    */
-
-    function reset() private {
-        require(block.number > endingBlock, "Wait till end of this period");
-        updateShare();
-        endAccShare[period] = periodDetails(
-            period,
+    /// @notice save the last period details, reset the contract at the end of period and pause farming.
+    function __reset() private {
+        require(block.timestamp > endingDate, "Wait till end of this period");
+        __updateShare();
+        endAccShare[periodCounter] = PeriodDetails(
+            periodCounter,
             accShare,
-            rewPerBlock(),
-            startingBlock,
-            endingBlock,
+            rewPerSecond(),
+            startingDate,
+            endingDate,
             rewardBalance
         );
         totalReward = 0;
@@ -303,145 +212,145 @@ contract SMD_v5 is Ownable {
         isPaused = true;
     }
 
-    function resetAndsetStartEndBlock(
+    /**
+     * @notice set the start and end timestamp for the new period and add rewards to be
+     *         earned within this period. Previous period must have ended, otherwise use
+     *         {extendCurrentPeriod} to update current period.
+     *         also calls {__addReward} to add rewards to this contract so be sure to approve this contract
+     *         to spend your ERC20 before calling this function.
+     *
+     * @param _rewardAmount Amount of rewards to be earned within this period.
+     * @param _start Seconds at which the period starts - in UNIX timestamp.
+     * @param _end Seconds at which the period ends - in UNIX timestamp.
+     * @param _lockDuration Duration in hours to wait before being able to withdraw.
+     */
+    function setNewPeriod(
         uint256 _rewardAmount,
         uint256 _start,
         uint256 _end,
         uint256 _lockDuration
     ) external onlyOwner returns (bool) {
         require(
-            _start > currentBlock(),
-            "Start should be more than current block"
+            _start > block.timestamp,
+            "Start should be more than block.timestamp"
         );
         require(_end > _start, "End block should be greater than start");
         require(_rewardAmount > 0, "Reward must be positive");
-        reset();
-        bool rewardAdded = addReward(_rewardAmount);
+        __reset();
+        bool rewardAdded = __addReward(_rewardAmount);
         require(rewardAdded, "Rewards error");
-        setStartEnd(_start, _end);
+        __setStartEnd(_start, _end);
         lockDuration = _lockDuration;
         totalParticipants = 0;
-        emit NewPeriodSet(period, _start, _end, _lockDuration, _rewardAmount);
+        emit NewPeriodSet(
+            periodCounter,
+            _start,
+            _end,
+            _lockDuration,
+            _rewardAmount
+        );
         return true;
     }
 
-    /*
-        -   Function to update rewards and state parameters
-    */
-
-    function updateShare() private {
-        if (block.number <= lastRewardBlock) {
+    /// @notice update {accShare} and {lastSharesUpdateTime} for current period.
+    function __updateShare() private {
+        if (block.timestamp <= lastSharesUpdateTime) {
             return;
         }
         if (stakedBalance == 0) {
-            lastRewardBlock = block.number;
+            lastSharesUpdateTime = block.timestamp;
             return;
         }
 
-        uint256 noOfBlocks;
+        uint256 secSinceLastPeriod;
 
-        if (block.number >= endingBlock) {
-            noOfBlocks = endingBlock.sub(lastRewardBlock);
+        if (block.timestamp >= endingDate) {
+            secSinceLastPeriod = endingDate.sub(lastSharesUpdateTime);
         } else {
-            noOfBlocks = block.number.sub(lastRewardBlock);
+            secSinceLastPeriod = block.timestamp.sub(lastSharesUpdateTime);
         }
 
-        uint256 rewards = noOfBlocks.mul(rewPerBlock());
+        uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         accShare = accShare.add((rewards.mul(1e6).div(stakedBalance)));
-        if (block.number >= endingBlock) {
-            lastRewardBlock = endingBlock;
+        if (block.timestamp >= endingDate) {
+            lastSharesUpdateTime = endingDate;
         } else {
-            lastRewardBlock = block.number;
+            lastSharesUpdateTime = block.timestamp;
         }
     }
 
-    function rewPerBlock() public view returns (uint256) {
+    /// @notice calculate rewards to get per second for current period.
+    function rewPerSecond() public view returns (uint256) {
         if (totalReward == 0 || rewardBalance == 0) return 0;
-        uint256 rewardperBlock = totalReward.div(
-            (endingBlock.sub(startingBlock))
+        uint256 rewardPerSecond = totalReward.div(
+            (endingDate.sub(startingDate))
         );
-        return (rewardperBlock);
+        return (rewardPerSecond);
     }
 
-    function stake(uint256 amount)
-        external
-        _realAddress(msg.sender)
-        _hasAllowance(msg.sender, amount, tokenAddress)
-        returns (bool)
-    {
+    function stake(
+        uint256 amount
+    ) external hasAllowance(msg.sender, amount, tokenAddress) returns (bool) {
         require(!isPaused, "Contract is paused");
         require(
-            block.number >= startingBlock && block.number < endingBlock,
-            "Invalid period"
+            block.timestamp >= startingDate && block.timestamp < endingDate,
+            "No active pool (time)"
         );
         require(amount > 0, "Can't stake 0 amount");
-        return (_stake(msg.sender, amount));
+        return (__stake(msg.sender, amount));
     }
 
-    function _stake(address from, uint256 amount) private returns (bool) {
-        updateShare();
-
+    function __stake(address from, uint256 amount) private returns (bool) {
+        __updateShare();
+        // if never staked, create new deposit
         if (!hasStaked[from]) {
-            deposits[from] = Deposits(
-                amount,
-                block.number,
-                block.number,
-                accShare,
-                period
-            );
-            stakedBalance = stakedBalance.add(amount);
-            stakedTotal = stakedTotal.add(amount);
+            deposits[from] = Deposits({
+                amount: amount,
+                initialStake: block.timestamp,
+                latestClaim: block.timestamp,
+                userAccShare: accShare,
+                currentPeriod: periodCounter
+            });
             totalParticipants = totalParticipants.add(1);
             hasStaked[from] = true;
-            isPaid[from] = false;
-            if (!_payMe(from, amount, tokenAddress)) {
-                return false;
+        }
+        // otherwise update deposit details and claim pending rewards
+        else {
+            // if user has staked in previous period, renew and claim rewards from previous period
+            if (deposits[from].currentPeriod != periodCounter) {
+                bool renew_ = __renew(from);
+                require(renew_, "Error renewing");
             }
-            emit Staked(tokenAddress, from, amount);
-            return true;
-        } else {
-            if (deposits[from].currentPeriod != period) {
-                bool renew = _renew(from);
-                require(renew, "Error renewing");
-            } else {
-                bool claim = _claimRewards(from);
+            // otherwise on each new stake claim pending rewards of current period
+            else {
+                bool claim = __claimRewards(from);
                 require(claim, "Error paying rewards");
             }
 
             uint256 userAmount = deposits[from].amount;
 
-            deposits[from] = Deposits(
-                userAmount.add(amount),
-                block.number,
-                block.number,
-                accShare,
-                period
-            );
-
-            stakedBalance = stakedBalance.add(amount);
-            stakedTotal = stakedTotal.add(amount);
-            isPaid[from] = false;
-
-            if (!_payMe(from, amount, tokenAddress)) {
-                return false;
-            }
-
-            emit Staked(tokenAddress, from, amount);
-            return true;
+            deposits[from] = Deposits({
+                amount: userAmount.add(amount),
+                initialStake: block.timestamp,
+                latestClaim: block.timestamp,
+                userAccShare: accShare,
+                currentPeriod: periodCounter
+            });
         }
+        stakedBalance = stakedBalance.add(amount);
+        stakedTotal = stakedTotal.add(amount);
+        if (!__payMe(from, amount, tokenAddress)) {
+            return false;
+        }
+        emit Staked(tokenAddress, from, amount);
+        return true;
     }
 
-    function userDeposits(address from)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    /// @notice get user deposit details
+    function userDeposits(
+        address from
+    ) external view returns (uint256, uint256, uint256, uint256) {
         if (hasStaked[from]) {
             return (
                 deposits[from].amount,
@@ -449,79 +358,88 @@ contract SMD_v5 is Ownable {
                 deposits[from].latestClaim,
                 deposits[from].currentPeriod
             );
+        } else {
+            return (0, 0, 0, 0);
         }
     }
 
+    /// @custom:audit seems like a duplicate of {hasStaked}.
     function fetchUserShare(address from) public view returns (uint256) {
         require(hasStaked[from], "No stakes found for user");
         if (stakedBalance == 0) {
             return 0;
         }
         require(
-            deposits[from].currentPeriod == period,
-            "Please renew in the active valid period"
+            deposits[from].currentPeriod == periodCounter,
+            "Please renew in the active valid periodCounter"
         );
         uint256 userAmount = deposits[from].amount;
         require(userAmount > 0, "No stakes available for user"); //extra check
-        return (userAmount.mul(10000).div(stakedBalance)); //returns percentage upto 2 decimals
+        return 1;
     }
 
+    /// @dev claim pending rewards of current period.
     function claimRewards() public returns (bool) {
         require(fetchUserShare(msg.sender) > 0, "No stakes found for user");
-        return (_claimRewards(msg.sender));
+        return (__claimRewards(msg.sender));
     }
 
-    function _claimRewards(address from) private returns (bool) {
+    function __claimRewards(address from) private returns (bool) {
         uint256 userAccShare = deposits[from].userAccShare;
-        updateShare();
+        __updateShare();
         uint256 amount = deposits[from].amount;
         uint256 rewDebt = amount.mul(userAccShare).div(1e6);
         uint256 rew = (amount.mul(accShare).div(1e6)).sub(rewDebt);
         require(rew > 0, "No rewards generated");
         require(rew <= rewardBalance, "Not enough rewards in the contract");
         deposits[from].userAccShare = accShare;
-        deposits[from].latestClaim = block.number;
+        deposits[from].latestClaim = block.timestamp;
         rewardBalance = rewardBalance.sub(rew);
-        bool payRewards = _payDirect(from, rew, rewardTokenAddress);
+        bool payRewards = __payDirect(from, rew, rewardTokenAddress);
         require(payRewards, "Rewards transfer failed");
         emit PaidOut(tokenAddress, rewardTokenAddress, from, amount, rew);
         return true;
     }
 
+    /**
+     * @notice Should take into account farming rewards and LP staked from previous periods into the new
+     *         current period.
+     */
     function renew() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
         require(
-            deposits[msg.sender].currentPeriod != period,
+            deposits[msg.sender].currentPeriod != periodCounter,
             "Already renewed"
         );
         require(
-            block.number > startingBlock && block.number < endingBlock,
+            block.timestamp > startingDate && block.timestamp < endingDate,
             "Wrong time"
         );
-        return (_renew(msg.sender));
+        return (__renew(msg.sender));
     }
 
-    function _renew(address from) private returns (bool) {
-        updateShare();
+    function __renew(address from) private returns (bool) {
+        __updateShare();
         if (viewOldRewards(from) > 0) {
             bool claimed = claimOldRewards();
             require(claimed, "Error paying old rewards");
         }
-        deposits[from].currentPeriod = period;
-        deposits[from].initialStake = block.number;
-        deposits[from].latestClaim = block.number;
+        deposits[from].currentPeriod = periodCounter;
+        deposits[from].initialStake = block.timestamp;
+        deposits[from].latestClaim = block.timestamp;
         deposits[from].userAccShare = accShare;
         stakedBalance = stakedBalance.add(deposits[from].amount);
         totalParticipants = totalParticipants.add(1);
         return true;
     }
 
+    /// @notice get rewards from previous periods for `from` wallet.
     function viewOldRewards(address from) public view returns (uint256) {
         require(!isPaused, "Contract paused");
         require(hasStaked[from], "No stakings found, please stake");
 
-        if (deposits[from].currentPeriod == period) {
+        if (deposits[from].currentPeriod == periodCounter) {
             return 0;
         }
 
@@ -530,7 +448,7 @@ contract SMD_v5 is Ownable {
         uint256 accShare1 = endAccShare[userPeriod].accShare;
         uint256 userAccShare = deposits[from].userAccShare;
 
-        if (deposits[from].latestClaim >= endAccShare[userPeriod].endingBlock)
+        if (deposits[from].latestClaim >= endAccShare[userPeriod].endingDate)
             return 0;
         uint256 amount = deposits[from].amount;
         uint256 rewDebt = amount.mul(userAccShare).div(1e6);
@@ -541,11 +459,12 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
+    /// @notice should claim pending rewards from previous periods.
     function claimOldRewards() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
         require(
-            deposits[msg.sender].currentPeriod != period,
+            deposits[msg.sender].currentPeriod != periodCounter,
             "Already renewed"
         );
 
@@ -556,7 +475,7 @@ contract SMD_v5 is Ownable {
 
         require(
             deposits[msg.sender].latestClaim <
-                endAccShare[userPeriod].endingBlock,
+                endAccShare[userPeriod].endingDate,
             "Already claimed old rewards"
         );
         uint256 amount = deposits[msg.sender].amount;
@@ -564,39 +483,46 @@ contract SMD_v5 is Ownable {
         uint256 rew = (amount.mul(accShare1).div(1e6)).sub(rewDebt);
 
         require(rew <= rewardBalance, "Not enough rewards");
-        deposits[msg.sender].latestClaim = endAccShare[userPeriod].endingBlock;
+        deposits[msg.sender].latestClaim = endAccShare[userPeriod].endingDate;
         rewardBalance = rewardBalance.sub(rew);
-        bool paidOldRewards = _payDirect(msg.sender, rew, rewardTokenAddress);
+        bool paidOldRewards = __payDirect(msg.sender, rew, rewardTokenAddress);
         require(paidOldRewards, "Error paying");
-        emit PaidOut(tokenAddress, rewardTokenAddress, msg.sender, amount, rew);
+        emit PaidOut(
+            tokenAddress,
+            rewardTokenAddress,
+            msg.sender,
+            amount,
+            rew
+        );
         return true;
     }
 
+    /// @notice should calculate current pending rewards for `from` wallet for current period.
     function calculate(address from) public view returns (uint256) {
         if (fetchUserShare(from) == 0) return 0;
-        return (_calculate(from));
+        return (__calculate(from));
     }
 
-    function _calculate(address from) private view returns (uint256) {
+    function __calculate(address from) private view returns (uint256) {
         uint256 userAccShare = deposits[from].userAccShare;
         uint256 currentAccShare = accShare;
-        //Simulating updateShare() to calculate rewards
-        if (block.number <= lastRewardBlock) {
+        //Simulating __updateShare() to calculate rewards
+        if (block.timestamp <= lastSharesUpdateTime) {
             return 0;
         }
         if (stakedBalance == 0) {
             return 0;
         }
 
-        uint256 noOfBlocks;
+        uint256 secSinceLastPeriod;
 
-        if (block.number >= endingBlock) {
-            noOfBlocks = endingBlock.sub(lastRewardBlock);
+        if (block.timestamp >= endingDate) {
+            secSinceLastPeriod = endingDate.sub(lastSharesUpdateTime);
         } else {
-            noOfBlocks = block.number.sub(lastRewardBlock);
+            secSinceLastPeriod = block.timestamp.sub(lastSharesUpdateTime);
         }
 
-        uint256 rewards = noOfBlocks.mul(rewPerBlock());
+        uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         uint256 newAccShare = currentAccShare.add(
             (rewards.mul(1e6).div(stakedBalance))
@@ -607,33 +533,31 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
-    function emergencyWithdraw()
-        external
-        _realAddress(msg.sender)
-        returns (bool)
-    {
+    function emergencyWithdraw() external returns (bool) {
         require(
-            currentBlock() >
-                deposits[msg.sender].initialStake.add(lockDuration.mul(1200)),
+            block.timestamp >
+                deposits[msg.sender].initialStake.add(
+                    lockDuration.mul(SECONDS_PER_HOUR)
+                ),
             "Can't withdraw before lock duration"
         );
         require(hasStaked[msg.sender], "No stakes available for user");
         require(!isPaid[msg.sender], "Already Paid");
-        return (_withdraw(msg.sender, deposits[msg.sender].amount));
+        return (__withdraw(msg.sender, deposits[msg.sender].amount));
     }
 
-    function _withdraw(address from, uint256 amount) private returns (bool) {
-        updateShare();
+    function __withdraw(address from, uint256 amount) private returns (bool) {
+        __updateShare();
         deposits[from].amount = deposits[from].amount.sub(amount);
-        if (!isPaused && deposits[from].currentPeriod == period) {
+        if (!isPaused && deposits[from].currentPeriod == periodCounter) {
             stakedBalance = stakedBalance.sub(amount);
         }
-        bool paid = _payDirect(from, amount, tokenAddress);
+        bool paid = __payDirect(from, amount, tokenAddress);
         require(paid, "Error during withdraw");
         if (deposits[from].amount == 0) {
             isPaid[from] = true;
             hasStaked[from] = false;
-            if (deposits[from].currentPeriod == period) {
+            if (deposits[from].currentPeriod == periodCounter) {
                 totalParticipants = totalParticipants.sub(1);
             }
             delete deposits[from];
@@ -641,18 +565,16 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    function withdraw(uint256 amount)
-        external
-        _realAddress(msg.sender)
-        returns (bool)
-    {
+    function withdraw(uint256 amount) external returns (bool) {
         require(
-            currentBlock() >
-                deposits[msg.sender].initialStake.add(lockDuration.mul(1200)),
+            block.timestamp >
+                deposits[msg.sender].initialStake.add(
+                    lockDuration.mul(SECONDS_PER_HOUR)
+                ),
             "Can't withdraw before lock duration"
         );
         require(amount <= deposits[msg.sender].amount, "Wrong value");
-        if (deposits[msg.sender].currentPeriod == period) {
+        if (deposits[msg.sender].currentPeriod == periodCounter) {
             if (calculate(msg.sender) > 0) {
                 bool rewardsPaid = claimRewards();
                 require(rewardsPaid, "Error paying rewards");
@@ -663,45 +585,47 @@ contract SMD_v5 is Ownable {
             bool oldRewardsPaid = claimOldRewards();
             require(oldRewardsPaid, "Error paying old rewards");
         }
-        return (_withdraw(msg.sender, amount));
+        return (__withdraw(msg.sender, amount));
     }
 
-    function extendPeriod(uint256 rewardsToBeAdded)
-        external
-        onlyOwner
-        returns (bool)
-    {
+    /**
+     * @notice add rewards to current period and extend its runing time.
+     * @dev running should be updated based on the amount of rewards added and current rewards per second,
+     *      e.g.: 1000 rewards per second, then if we add 1000 rewards then we increase running time by
+     *      1 second.
+     */
+    function extendCurrentPeriod(
+        uint256 rewardsToBeAdded
+    ) external onlyOwner returns (bool) {
         require(
-            currentBlock() > startingBlock && currentBlock() < endingBlock,
-            "Invalid period"
+            block.timestamp > startingDate && block.timestamp < endingDate,
+            "No active pool (time)"
         );
         require(rewardsToBeAdded > 0, "Zero rewards");
-        bool addedRewards = _payMe(
+        bool addedRewards = __payMe(
             msg.sender,
             rewardsToBeAdded,
             rewardTokenAddress
         );
         require(addedRewards, "Error adding rewards");
-        endingBlock = endingBlock.add(rewardsToBeAdded.div(rewPerBlock()));
+        endingDate = endingDate.add(rewardsToBeAdded.div(rewPerSecond()));
         totalReward = totalReward.add(rewardsToBeAdded);
         rewardBalance = rewardBalance.add(rewardsToBeAdded);
-        emit PeriodExtended(period, endingBlock, rewardsToBeAdded);
+        emit PeriodExtended(periodCounter, endingDate, rewardsToBeAdded);
         return true;
     }
 
-    function currentBlock() public view returns (uint256) {
-        return (block.number);
-    }
-
-    function _payMe(
+    /// @notice deposit rewards to this farming contract.
+    function __payMe(
         address payer,
         uint256 amount,
         address token
     ) private returns (bool) {
-        return _payTo(payer, address(this), amount, token);
+        return __payTo(payer, address(this), amount, token);
     }
 
-    function _payTo(
+    /// @notice should transfer rewards to farming contract.
+    function __payTo(
         address allower,
         address receiver,
         uint256 amount,
@@ -710,12 +634,13 @@ contract SMD_v5 is Ownable {
         // Request to transfer amount from the contract to receiver.
         // contract does not own the funds, so the allower must have added allowance to the contract
         // Allower is the original owner.
-        ERC20Interface = IERC20(token);
-        ERC20Interface.safeTransferFrom(allower, receiver, amount);
+        _erc20Interface = IERC20(token);
+        _erc20Interface.safeTransferFrom(allower, receiver, amount);
         return true;
     }
 
-    function _payDirect(
+    /// @notice should pay rewards to `to` wallet and in certain case withdraw deposited LP token.
+    function __payDirect(
         address to,
         uint256 amount,
         address token
@@ -724,17 +649,13 @@ contract SMD_v5 is Ownable {
             token == tokenAddress || token == rewardTokenAddress,
             "Invalid token address"
         );
-        ERC20Interface = IERC20(token);
-        ERC20Interface.safeTransfer(to, amount);
+        _erc20Interface = IERC20(token);
+        _erc20Interface.safeTransfer(to, amount);
         return true;
     }
 
-    modifier _realAddress(address addr) {
-        require(addr != address(0), "Zero address");
-        _;
-    }
-
-    modifier _hasAllowance(
+    /// @notice check whether `allower` has approved this contract to spend at least `amount` of `token`.
+    modifier hasAllowance(
         address allower,
         uint256 amount,
         address token
@@ -744,9 +665,26 @@ contract SMD_v5 is Ownable {
             token == tokenAddress || token == rewardTokenAddress,
             "Invalid token address"
         );
-        ERC20Interface = IERC20(token);
-        uint256 ourAllowance = ERC20Interface.allowance(allower, address(this));
+        _erc20Interface = IERC20(token);
+        uint256 ourAllowance = _erc20Interface.allowance(
+            allower,
+            address(this)
+        );
         require(amount <= ourAllowance, "Make sure to add enough allowance");
         _;
+    }
+
+    function recoverLostERC20(address token, address to) external onlyOwner {
+        if (token == address(0)) revert("Token_Zero_Address");
+        if (to == address(0)) revert("To_Zero_Address");
+
+        uint256 amount = IERC20(token).balanceOf(address(this));
+
+        // only retrieve lost {rewardTokenAddress}
+        if (token == rewardTokenAddress) amount -= rewardBalance;
+        // only retrieve lost LP tokens
+        if (token == tokenAddress) amount -= stakedTotal;
+
+        IERC20(token).safeTransfer(to, amount);
     }
 }

@@ -22,19 +22,19 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "period",
+          "name": "periodCounter",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "startBlock",
+          "name": "startDate",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "endBlock",
+          "name": "endDate",
           "type": "uint256"
         },
         {
@@ -115,13 +115,13 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "period",
+          "name": "periodCounter",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "endBlock",
+          "name": "endDate",
           "type": "uint256"
         },
         {
@@ -161,20 +161,7 @@
     },
     {
       "inputs": [],
-      "name": "ERC20Interface",
-      "outputs": [
-        {
-          "internalType": "contract IERC20",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "accShare",
+      "name": "SECONDS_PER_HOUR",
       "outputs": [
         {
           "internalType": "uint256",
@@ -187,7 +174,7 @@
     },
     {
       "inputs": [],
-      "name": "blocksPerHour",
+      "name": "accShare",
       "outputs": [
         {
           "internalType": "uint256",
@@ -245,19 +232,6 @@
     },
     {
       "inputs": [],
-      "name": "currentBlock",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "emergencyWithdraw",
       "outputs": [
         {
@@ -281,7 +255,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "period",
+          "name": "periodCounter",
           "type": "uint256"
         },
         {
@@ -291,17 +265,17 @@
         },
         {
           "internalType": "uint256",
-          "name": "rewPerBlock",
+          "name": "rewPerSecond",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "startingBlock",
+          "name": "startingDate",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "endingBlock",
+          "name": "endingDate",
           "type": "uint256"
         },
         {
@@ -315,7 +289,7 @@
     },
     {
       "inputs": [],
-      "name": "endingBlock",
+      "name": "endingDate",
       "outputs": [
         {
           "internalType": "uint256",
@@ -334,7 +308,7 @@
           "type": "uint256"
         }
       ],
-      "name": "extendPeriod",
+      "name": "extendCurrentPeriod",
       "outputs": [
         {
           "internalType": "bool",
@@ -417,7 +391,7 @@
     },
     {
       "inputs": [],
-      "name": "lastRewardBlock",
+      "name": "lastSharesUpdateTime",
       "outputs": [
         {
           "internalType": "uint256",
@@ -456,7 +430,7 @@
     },
     {
       "inputs": [],
-      "name": "period",
+      "name": "periodCounter",
       "outputs": [
         {
           "internalType": "uint256",
@@ -465,6 +439,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "recoverLostERC20",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -488,42 +480,8 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_rewardAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_start",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_end",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_lockDuration",
-          "type": "uint256"
-        }
-      ],
-      "name": "resetAndsetStartEndBlock",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
-      "name": "rewPerBlock",
+      "name": "rewPerSecond",
       "outputs": [
         {
           "internalType": "uint256",
@@ -558,6 +516,40 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_rewardAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_start",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_end",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_lockDuration",
+          "type": "uint256"
+        }
+      ],
+      "name": "setNewPeriod",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -607,7 +599,7 @@
     },
     {
       "inputs": [],
-      "name": "startingBlock",
+      "name": "startingDate",
       "outputs": [
         {
           "internalType": "uint256",

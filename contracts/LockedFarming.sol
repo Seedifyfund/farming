@@ -31,8 +31,8 @@ contract SMD_v5 is Ownable {
      *         calculate lost LP tokens.
      */
     uint256 public currentStakedBalance;
-    /// @notice should be the amount of {tokenAddress} staked in the contract for the current period.
-    uint256 public stakedBalance;
+    /// @notice amount of {tokenAddress} staked in the contract for the current period.
+    uint256 public stakedBalanceCurrPeriod;
     /// @notice should be the amount of rewards available in the contract accross all periods.
     uint256 public rewardBalance;
     /// @notice should be the amount of rewards for current period.
@@ -226,7 +226,7 @@ contract SMD_v5 is Ownable {
     /// reset contracts's deposit data at the end of period and pause it.
     function __reset() private {
         totalReward = 0;
-        stakedBalance = 0;
+        stakedBalanceCurrPeriod = 0;
         totalParticipants = 0;
         isPaused = true;
     }
@@ -282,7 +282,7 @@ contract SMD_v5 is Ownable {
         if (block.timestamp <= lastSharesUpdateTime) {
             return;
         }
-        if (stakedBalance == 0) {
+        if (stakedBalanceCurrPeriod == 0) {
             lastSharesUpdateTime = block.timestamp;
             return;
         }
@@ -297,7 +297,9 @@ contract SMD_v5 is Ownable {
 
         uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
-        accShare = accShare.add((rewards.mul(1e6).div(stakedBalance)));
+        accShare = accShare.add(
+            (rewards.mul(1e6).div(stakedBalanceCurrPeriod))
+        );
         if (block.timestamp >= endingDate) {
             lastSharesUpdateTime = endingDate;
         } else {
@@ -363,7 +365,7 @@ contract SMD_v5 is Ownable {
                 currentPeriod: periodCounter
             });
         }
-        stakedBalance = stakedBalance.add(amount);
+        stakedBalanceCurrPeriod = stakedBalanceCurrPeriod.add(amount);
         totalStaked = totalStaked.add(amount);
         currentStakedBalance += amount;
         if (!__payMe(from, amount, tokenAddress)) {
@@ -383,7 +385,7 @@ contract SMD_v5 is Ownable {
     /// @custom:audit seems like a duplicate of {hasStaked}.
     function fetchUserShare(address from) public view returns (uint256) {
         require(hasStaked[from], "No stakes found for user");
-        if (stakedBalance == 0) {
+        if (stakedBalanceCurrPeriod == 0) {
             return 0;
         }
         require(
@@ -446,7 +448,9 @@ contract SMD_v5 is Ownable {
         deposits[from].latestStakeAt = block.timestamp;
         deposits[from].latestClaimAt = block.timestamp;
         deposits[from].userAccShare = accShare;
-        stakedBalance = stakedBalance.add(deposits[from].amount);
+        stakedBalanceCurrPeriod = stakedBalanceCurrPeriod.add(
+            deposits[from].amount
+        );
         totalParticipants = totalParticipants.add(1);
         return true;
     }
@@ -530,7 +534,7 @@ contract SMD_v5 is Ownable {
         if (block.timestamp <= lastSharesUpdateTime) {
             return 0;
         }
-        if (stakedBalance == 0) {
+        if (stakedBalanceCurrPeriod == 0) {
             return 0;
         }
 
@@ -545,7 +549,7 @@ contract SMD_v5 is Ownable {
         uint256 rewards = secSinceLastPeriod.mul(rewPerSecond());
 
         uint256 newAccShare = currentAccShare.add(
-            (rewards.mul(1e6).div(stakedBalance))
+            (rewards.mul(1e6).div(stakedBalanceCurrPeriod))
         );
         uint256 amount = deposits[from].amount;
         uint256 rewDebt = amount.mul(userAccShare).div(1e6);
@@ -570,7 +574,7 @@ contract SMD_v5 is Ownable {
         __updateShare();
         deposits[from].amount = deposits[from].amount.sub(amount);
         if (!isPaused && deposits[from].currentPeriod == periodCounter) {
-            stakedBalance = stakedBalance.sub(amount);
+            stakedBalanceCurrPeriod -= stakedBalanceCurrPeriod.sub(amount);
         }
         bool paid = __payDirect(from, amount, tokenAddress);
         require(paid, "Error during withdraw");

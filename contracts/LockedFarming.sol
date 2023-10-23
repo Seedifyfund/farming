@@ -25,6 +25,8 @@ contract SMD_v5 is Ownable {
     address public rewardTokenAddress;
     /// @notice total amount of {tokenAddress} staked in the contract over its whole existence.
     uint256 public stakedTotal;
+    /// @notice current total amount of {tokenAddress} staked in the contract accross all periods.
+    uint256 public currentStakedBalance;
     /// @notice should be the amount of {tokenAddress} staked in the contract for the current period.
     uint256 public stakedBalance;
     /// @notice should be the amount of rewards available in the contract accross all periods.
@@ -357,6 +359,7 @@ contract SMD_v5 is Ownable {
         }
         stakedBalance = stakedBalance.add(amount);
         stakedTotal = stakedTotal.add(amount);
+        currentStakedBalance += amount;
         if (!__payMe(from, amount, tokenAddress)) {
             return false;
         }
@@ -581,9 +584,15 @@ contract SMD_v5 is Ownable {
             }
             delete deposits[from];
         }
+
+        // can never withraw more than staked due to checks in both {withdraw} and {emergencyWithdraw}.
+        unchecked {
+            currentStakedBalance -= amount;
+        }
         return true;
     }
 
+    /// Withdraw `amount` deposited LP token after lock duration.
     function withdraw(uint256 amount) external returns (bool) {
         require(
             block.timestamp >
@@ -702,7 +711,7 @@ contract SMD_v5 is Ownable {
         // only retrieve lost {rewardTokenAddress}
         if (token == rewardTokenAddress) amount -= rewardBalance;
         // only retrieve lost LP tokens
-        if (token == tokenAddress) amount -= stakedTotal;
+        if (token == tokenAddress) amount -= currentStakedBalance;
 
         IERC20(token).safeTransfer(to, amount);
     }

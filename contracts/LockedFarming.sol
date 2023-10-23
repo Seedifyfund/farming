@@ -476,7 +476,7 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
-    /// @notice should claim pending rewards from previous periods.
+    /// @notice save old period details and claim pending rewards from previous periods.
     function claimOldRewards() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
@@ -484,6 +484,8 @@ contract SMD_v5 is Ownable {
             deposits[msg.sender].currentPeriod != periodCounter,
             "Already renewed"
         );
+
+        __saveOldPeriod();
 
         uint256 userPeriod = deposits[msg.sender].currentPeriod;
 

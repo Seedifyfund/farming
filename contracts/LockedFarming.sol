@@ -376,17 +376,8 @@ contract SMD_v5 is Ownable {
     /// @notice get user deposit details
     function userDeposits(
         address from
-    ) external view returns (uint256, uint256, uint256, uint256) {
-        if (hasStaked[from]) {
-            return (
-                deposits[from].amount,
-                deposits[from].latestStakeAt,
-                deposits[from].latestClaimAt,
-                deposits[from].currentPeriod
-            );
-        } else {
-            return (0, 0, 0, 0);
-        }
+    ) external view returns (Deposits memory deposit) {
+        return deposits[from];
     }
 
     /// @custom:audit seems like a duplicate of {hasStaked}.

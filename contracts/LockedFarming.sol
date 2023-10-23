@@ -25,8 +25,11 @@ contract SMD_v5 is Ownable {
     /// @notice token address to in which rewards will be paid in.
     address public rewardTokenAddress;
     /// @notice total amount of {tokenAddress} staked in the contract over its whole existence.
-    uint256 public stakedTotal;
-    /// @notice current total amount of {tokenAddress} staked in the contract accross all periods.
+    uint256 public totalStaked;
+    /**
+     * @notice current amount of {tokenAddress} staked in the contract accross all periods. Use to
+     *         calculate lost LP tokens.
+     */
     uint256 public currentStakedBalance;
     /// @notice should be the amount of {tokenAddress} staked in the contract for the current period.
     uint256 public stakedBalance;
@@ -361,7 +364,7 @@ contract SMD_v5 is Ownable {
             });
         }
         stakedBalance = stakedBalance.add(amount);
-        stakedTotal = stakedTotal.add(amount);
+        totalStaked = totalStaked.add(amount);
         currentStakedBalance += amount;
         if (!__payMe(from, amount, tokenAddress)) {
             return false;

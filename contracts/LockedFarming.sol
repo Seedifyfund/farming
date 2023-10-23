@@ -69,8 +69,11 @@ contract SMD_v5 is Ownable {
     uint256 public totalParticipants;
     /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
     uint256 public lockDuration;
-    /// @notice whether the farming contract is paused or not.
-    /// @dev does prevent wallets from retrieving rewards, stake, withdraw, renew and see old rewards.
+    /**
+     * @notice whether prevent or not, wallets from staking, renew staking, view old rewardsm claim old
+     *         rewards and withdrawing (indirectly from {viewOldRewards}). Only claim rewards
+     *         (current period) and admin functions are allowed.
+     */
     bool public isPaused;
 
     /// @notice should be the last transfered token which is either {tokenAddress} or {rewardTokenAddress}.

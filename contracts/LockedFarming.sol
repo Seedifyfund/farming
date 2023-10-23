@@ -164,16 +164,21 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice set start and end date using UNIX timestamp.
-     * @dev also increase period counter/id and resume farming.
+     * @notice Config new period detailsa according to {setNewPeriod} parameters.
      *
      * @param _start Seconds at which the period starts - in UNIX timestamp.
      * @param _end Seconds at which the period ends - in UNIX timestamp.
+     * @param _lockDuration Duration in hours to wait before being able to withdraw staked LP.
      */
-    function __setStartEnd(uint256 _start, uint256 _end) private {
+    function __configNewPeriod(
+        uint256 _start,
+        uint256 _end,
+        uint256 _lockDuration
+    ) private {
         require(totalReward > 0, "Add rewards for this periodCounter");
         startingDate = _start;
         endingDate = _end;
+        lockDuration = _lockDuration;
         periodCounter++;
         isPaused = false;
         lastSharesUpdateTime = _start;
@@ -195,20 +200,26 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /// @notice save the last period details, reset the contract at the end of period and pause farming.
+    /// save the details of the last ended period.
+    function __saveOldPeriod() private {
+        // only save old period if it has not been saved before
+        if (endAccShare[periodCounter].startingDate == 0) {
+            endAccShare[periodCounter] = PeriodDetails(
+                periodCounter,
+                accShare,
+                rewPerSecond(),
+                startingDate,
+                endingDate,
+                rewardBalance
+            );
+        }
+    }
+
+    /// reset contracts's deposit data at the end of period and pause it.
     function __reset() private {
-        require(block.timestamp > endingDate, "Wait till end of this period");
-        __updateShare();
-        endAccShare[periodCounter] = PeriodDetails(
-            periodCounter,
-            accShare,
-            rewPerSecond(),
-            startingDate,
-            endingDate,
-            rewardBalance
-        );
         totalReward = 0;
         stakedBalance = 0;
+        totalParticipants = 0;
         isPaused = true;
     }
 
@@ -222,7 +233,7 @@ contract SMD_v5 is Ownable {
      * @param _rewardAmount Amount of rewards to be earned within this period.
      * @param _start Seconds at which the period starts - in UNIX timestamp.
      * @param _end Seconds at which the period ends - in UNIX timestamp.
-     * @param _lockDuration Duration in hours to wait before being able to withdraw.
+     * @param _lockDuration Duration in hours to wait before being able to withdraw staked LP.
      */
     function setNewPeriod(
         uint256 _rewardAmount,
@@ -236,12 +247,18 @@ contract SMD_v5 is Ownable {
         );
         require(_end > _start, "End block should be greater than start");
         require(_rewardAmount > 0, "Reward must be positive");
+        require(block.timestamp > endingDate, "Wait till end of this period");
+
+        __updateShare();
+        __saveOldPeriod();
+
         __reset();
         bool rewardAdded = __addReward(_rewardAmount);
+
         require(rewardAdded, "Rewards error");
-        __setStartEnd(_start, _end);
-        lockDuration = _lockDuration;
-        totalParticipants = 0;
+
+        __configNewPeriod(_start, _end, _lockDuration);
+
         emit NewPeriodSet(
             periodCounter,
             _start,

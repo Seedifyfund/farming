@@ -592,10 +592,8 @@ contract SMD_v5 is Ownable {
             delete deposits[from];
         }
 
-        // can never withraw more than staked due to checks in both {withdraw} and {emergencyWithdraw}.
-        unchecked {
-            currentStakedBalance -= amount;
-        }
+        currentStakedBalance -= amount;
+
         return true;
     }
 

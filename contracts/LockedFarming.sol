@@ -12,6 +12,7 @@ import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 /**
  * @title Farming
  * @notice Seedify's farming contract: stake LP token and earn rewards.
+ * @custom:audit This contract is NOT made to be used with deflationary tokens at all.
  */
 contract SMD_v5 is Ownable {
     using SafeMath for uint256;
@@ -24,7 +25,12 @@ contract SMD_v5 is Ownable {
     /// @notice token address to in which rewards will be paid in.
     address public rewardTokenAddress;
     /// @notice total amount of {tokenAddress} staked in the contract over its whole existence.
-    uint256 public stakedTotal;
+    uint256 public totalStaked;
+    /**
+     * @notice current amount of {tokenAddress} staked in the contract accross all periods. Use to
+     *         calculate lost LP tokens.
+     */
+    uint256 public currentStakedBalance;
     /// @notice should be the amount of {tokenAddress} staked in the contract for the current period.
     uint256 public stakedBalance;
     /// @notice should be the amount of rewards available in the contract accross all periods.
@@ -71,20 +77,22 @@ contract SMD_v5 is Ownable {
     IERC20 internal _erc20Interface;
 
     /**
-     * @notice struct which should represent the deposit made by a wallet based on all period if the wallet
-     *         called {renew}.
+     * @notice struct which represent deposits made by a wallet based on a specific period. Each period has
+     *         its own deposit data.
      *
      * @param amount amount of LP {tokenAddress} deposited accross all period.
-     * @param initialStake should be the timestamp at which the wallet renewed their stake for new periods.
-     * @param latestClaim latest timestamp at which the wallet claimed their rewards.
+     * @param latestStakeAt timestamp at which the latest stake has been made by the wallet for current
+     *        period. Maturity date will be re-calculated from this timestamp which means each time the
+     *        wallet stakes a new amount it has to wait for `lockDuration` before being able to withdraw.
+     * @param latestClaimAt latest timestamp at which the wallet claimed their rewards.
      * @param userAccShare should be the amount of rewards per wei of deposited LP token {tokenAddress}
      *        accross all periods.
      * @param currentPeriod should be the lastest periodCounter at which the wallet participated.
      */
     struct Deposits {
         uint256 amount;
-        uint256 initialStake;
-        uint256 latestClaim;
+        uint256 latestStakeAt;
+        uint256 latestClaimAt;
         uint256 userAccShare;
         uint256 currentPeriod;
     }
@@ -164,16 +172,21 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice set start and end date using UNIX timestamp.
-     * @dev also increase period counter/id and resume farming.
+     * @notice Config new period detailsa according to {setNewPeriod} parameters.
      *
      * @param _start Seconds at which the period starts - in UNIX timestamp.
      * @param _end Seconds at which the period ends - in UNIX timestamp.
+     * @param _lockDuration Duration in hours to wait before being able to withdraw staked LP.
      */
-    function __setStartEnd(uint256 _start, uint256 _end) private {
+    function __configNewPeriod(
+        uint256 _start,
+        uint256 _end,
+        uint256 _lockDuration
+    ) private {
         require(totalReward > 0, "Add rewards for this periodCounter");
         startingDate = _start;
         endingDate = _end;
+        lockDuration = _lockDuration;
         periodCounter++;
         isPaused = false;
         lastSharesUpdateTime = _start;
@@ -195,20 +208,26 @@ contract SMD_v5 is Ownable {
         return true;
     }
 
-    /// @notice save the last period details, reset the contract at the end of period and pause farming.
+    /// save the details of the last ended period.
+    function __saveOldPeriod() private {
+        // only save old period if it has not been saved before
+        if (endAccShare[periodCounter].startingDate == 0) {
+            endAccShare[periodCounter] = PeriodDetails(
+                periodCounter,
+                accShare,
+                rewPerSecond(),
+                startingDate,
+                endingDate,
+                rewardBalance
+            );
+        }
+    }
+
+    /// reset contracts's deposit data at the end of period and pause it.
     function __reset() private {
-        require(block.timestamp > endingDate, "Wait till end of this period");
-        __updateShare();
-        endAccShare[periodCounter] = PeriodDetails(
-            periodCounter,
-            accShare,
-            rewPerSecond(),
-            startingDate,
-            endingDate,
-            rewardBalance
-        );
         totalReward = 0;
         stakedBalance = 0;
+        totalParticipants = 0;
         isPaused = true;
     }
 
@@ -222,7 +241,7 @@ contract SMD_v5 is Ownable {
      * @param _rewardAmount Amount of rewards to be earned within this period.
      * @param _start Seconds at which the period starts - in UNIX timestamp.
      * @param _end Seconds at which the period ends - in UNIX timestamp.
-     * @param _lockDuration Duration in hours to wait before being able to withdraw.
+     * @param _lockDuration Duration in hours to wait before being able to withdraw staked LP.
      */
     function setNewPeriod(
         uint256 _rewardAmount,
@@ -236,12 +255,18 @@ contract SMD_v5 is Ownable {
         );
         require(_end > _start, "End block should be greater than start");
         require(_rewardAmount > 0, "Reward must be positive");
+        require(block.timestamp > endingDate, "Wait till end of this period");
+
+        __updateShare();
+        __saveOldPeriod();
+
         __reset();
         bool rewardAdded = __addReward(_rewardAmount);
+
         require(rewardAdded, "Rewards error");
-        __setStartEnd(_start, _end);
-        lockDuration = _lockDuration;
-        totalParticipants = 0;
+
+        __configNewPeriod(_start, _end, _lockDuration);
+
         emit NewPeriodSet(
             periodCounter,
             _start,
@@ -307,8 +332,8 @@ contract SMD_v5 is Ownable {
         if (!hasStaked[from]) {
             deposits[from] = Deposits({
                 amount: amount,
-                initialStake: block.timestamp,
-                latestClaim: block.timestamp,
+                latestStakeAt: block.timestamp,
+                latestClaimAt: block.timestamp,
                 userAccShare: accShare,
                 currentPeriod: periodCounter
             });
@@ -332,14 +357,15 @@ contract SMD_v5 is Ownable {
 
             deposits[from] = Deposits({
                 amount: userAmount.add(amount),
-                initialStake: block.timestamp,
-                latestClaim: block.timestamp,
+                latestStakeAt: block.timestamp,
+                latestClaimAt: block.timestamp,
                 userAccShare: accShare,
                 currentPeriod: periodCounter
             });
         }
         stakedBalance = stakedBalance.add(amount);
-        stakedTotal = stakedTotal.add(amount);
+        totalStaked = totalStaked.add(amount);
+        currentStakedBalance += amount;
         if (!__payMe(from, amount, tokenAddress)) {
             return false;
         }
@@ -354,8 +380,8 @@ contract SMD_v5 is Ownable {
         if (hasStaked[from]) {
             return (
                 deposits[from].amount,
-                deposits[from].initialStake,
-                deposits[from].latestClaim,
+                deposits[from].latestStakeAt,
+                deposits[from].latestClaimAt,
                 deposits[from].currentPeriod
             );
         } else {
@@ -393,7 +419,7 @@ contract SMD_v5 is Ownable {
         require(rew > 0, "No rewards generated");
         require(rew <= rewardBalance, "Not enough rewards in the contract");
         deposits[from].userAccShare = accShare;
-        deposits[from].latestClaim = block.timestamp;
+        deposits[from].latestClaimAt = block.timestamp;
         rewardBalance = rewardBalance.sub(rew);
         bool payRewards = __payDirect(from, rew, rewardTokenAddress);
         require(payRewards, "Rewards transfer failed");
@@ -426,8 +452,8 @@ contract SMD_v5 is Ownable {
             require(claimed, "Error paying old rewards");
         }
         deposits[from].currentPeriod = periodCounter;
-        deposits[from].initialStake = block.timestamp;
-        deposits[from].latestClaim = block.timestamp;
+        deposits[from].latestStakeAt = block.timestamp;
+        deposits[from].latestClaimAt = block.timestamp;
         deposits[from].userAccShare = accShare;
         stakedBalance = stakedBalance.add(deposits[from].amount);
         totalParticipants = totalParticipants.add(1);
@@ -448,7 +474,7 @@ contract SMD_v5 is Ownable {
         uint256 accShare1 = endAccShare[userPeriod].accShare;
         uint256 userAccShare = deposits[from].userAccShare;
 
-        if (deposits[from].latestClaim >= endAccShare[userPeriod].endingDate)
+        if (deposits[from].latestClaimAt >= endAccShare[userPeriod].endingDate)
             return 0;
         uint256 amount = deposits[from].amount;
         uint256 rewDebt = amount.mul(userAccShare).div(1e6);
@@ -459,7 +485,7 @@ contract SMD_v5 is Ownable {
         return (rew);
     }
 
-    /// @notice should claim pending rewards from previous periods.
+    /// @notice save old period details and claim pending rewards from previous periods.
     function claimOldRewards() public returns (bool) {
         require(!isPaused, "Contract paused");
         require(hasStaked[msg.sender], "No stakings found, please stake");
@@ -468,13 +494,15 @@ contract SMD_v5 is Ownable {
             "Already renewed"
         );
 
+        __saveOldPeriod();
+
         uint256 userPeriod = deposits[msg.sender].currentPeriod;
 
         uint256 accShare1 = endAccShare[userPeriod].accShare;
         uint256 userAccShare = deposits[msg.sender].userAccShare;
 
         require(
-            deposits[msg.sender].latestClaim <
+            deposits[msg.sender].latestClaimAt <
                 endAccShare[userPeriod].endingDate,
             "Already claimed old rewards"
         );
@@ -483,7 +511,8 @@ contract SMD_v5 is Ownable {
         uint256 rew = (amount.mul(accShare1).div(1e6)).sub(rewDebt);
 
         require(rew <= rewardBalance, "Not enough rewards");
-        deposits[msg.sender].latestClaim = endAccShare[userPeriod].endingDate;
+        deposits[msg.sender].latestClaimAt = endAccShare[userPeriod]
+            .endingDate;
         rewardBalance = rewardBalance.sub(rew);
         bool paidOldRewards = __payDirect(msg.sender, rew, rewardTokenAddress);
         require(paidOldRewards, "Error paying");
@@ -536,7 +565,7 @@ contract SMD_v5 is Ownable {
     function emergencyWithdraw() external returns (bool) {
         require(
             block.timestamp >
-                deposits[msg.sender].initialStake.add(
+                deposits[msg.sender].latestStakeAt.add(
                     lockDuration.mul(SECONDS_PER_HOUR)
                 ),
             "Can't withdraw before lock duration"
@@ -562,13 +591,17 @@ contract SMD_v5 is Ownable {
             }
             delete deposits[from];
         }
+
+        currentStakedBalance -= amount;
+
         return true;
     }
 
+    /// Withdraw `amount` deposited LP token after lock duration.
     function withdraw(uint256 amount) external returns (bool) {
         require(
             block.timestamp >
-                deposits[msg.sender].initialStake.add(
+                deposits[msg.sender].latestStakeAt.add(
                     lockDuration.mul(SECONDS_PER_HOUR)
                 ),
             "Can't withdraw before lock duration"
@@ -683,7 +716,7 @@ contract SMD_v5 is Ownable {
         // only retrieve lost {rewardTokenAddress}
         if (token == rewardTokenAddress) amount -= rewardBalance;
         // only retrieve lost LP tokens
-        if (token == tokenAddress) amount -= stakedTotal;
+        if (token == tokenAddress) amount -= currentStakedBalance;
 
         IERC20(token).safeTransfer(to, amount);
     }

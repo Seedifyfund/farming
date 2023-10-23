@@ -12,6 +12,7 @@ import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
 /**
  * @title Farming
  * @notice Seedify's farming contract: stake LP token and earn rewards.
+ * @custom:audit This contract is NOT made to be used with deflationary tokens at all.
  */
 contract SMD_v5 is Ownable {
     using SafeMath for uint256;

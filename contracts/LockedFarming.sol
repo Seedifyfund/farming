@@ -573,7 +573,7 @@ contract SMD_v5 is Ownable {
     function __withdraw(address from, uint256 amount) private returns (bool) {
         __updateShare();
         deposits[from].amount = deposits[from].amount.sub(amount);
-        if (!isPaused && deposits[from].currentPeriod == periodCounter) {
+        if (deposits[from].currentPeriod == periodCounter) {
             stakedBalanceCurrPeriod -= stakedBalanceCurrPeriod.sub(amount);
         }
         bool paid = __payDirect(from, amount, tokenAddress);

@@ -74,11 +74,13 @@ contract SMD_v5 is Ownable {
     IERC20 internal _erc20Interface;
 
     /**
-     * @notice struct which should represent the deposit made by a wallet based on all period if the wallet
-     *         called {renew}.
+     * @notice struct which represent deposits made by a wallet based on a specific period. Each period has
+     *         its own deposit data.
      *
      * @param amount amount of LP {tokenAddress} deposited accross all period.
-     * @param initialStake should be the timestamp at which the wallet renewed their stake for new periods.
+     * @param latestStakeAt timestamp at which the latest stake has been made by the wallet for current
+     *        period. Maturity date will be re-calculated from this timestamp which means each time the
+     *        wallet stakes a new amount it has to wait for `lockDuration` before being able to withdraw.
      * @param latestClaimAt latest timestamp at which the wallet claimed their rewards.
      * @param userAccShare should be the amount of rewards per wei of deposited LP token {tokenAddress}
      *        accross all periods.
@@ -86,7 +88,7 @@ contract SMD_v5 is Ownable {
      */
     struct Deposits {
         uint256 amount;
-        uint256 initialStakeAt;
+        uint256 latestStakeAt;
         uint256 latestClaimAt;
         uint256 userAccShare;
         uint256 currentPeriod;
@@ -327,7 +329,7 @@ contract SMD_v5 is Ownable {
         if (!hasStaked[from]) {
             deposits[from] = Deposits({
                 amount: amount,
-                initialStakeAt: block.timestamp,
+                latestStakeAt: block.timestamp,
                 latestClaimAt: block.timestamp,
                 userAccShare: accShare,
                 currentPeriod: periodCounter
@@ -352,7 +354,7 @@ contract SMD_v5 is Ownable {
 
             deposits[from] = Deposits({
                 amount: userAmount.add(amount),
-                initialStakeAt: block.timestamp,
+                latestStakeAt: block.timestamp,
                 latestClaimAt: block.timestamp,
                 userAccShare: accShare,
                 currentPeriod: periodCounter
@@ -375,7 +377,7 @@ contract SMD_v5 is Ownable {
         if (hasStaked[from]) {
             return (
                 deposits[from].amount,
-                deposits[from].initialStakeAt,
+                deposits[from].latestStakeAt,
                 deposits[from].latestClaimAt,
                 deposits[from].currentPeriod
             );
@@ -447,7 +449,7 @@ contract SMD_v5 is Ownable {
             require(claimed, "Error paying old rewards");
         }
         deposits[from].currentPeriod = periodCounter;
-        deposits[from].initialStakeAt = block.timestamp;
+        deposits[from].latestStakeAt = block.timestamp;
         deposits[from].latestClaimAt = block.timestamp;
         deposits[from].userAccShare = accShare;
         stakedBalance = stakedBalance.add(deposits[from].amount);
@@ -560,7 +562,7 @@ contract SMD_v5 is Ownable {
     function emergencyWithdraw() external returns (bool) {
         require(
             block.timestamp >
-                deposits[msg.sender].initialStakeAt.add(
+                deposits[msg.sender].latestStakeAt.add(
                     lockDuration.mul(SECONDS_PER_HOUR)
                 ),
             "Can't withdraw before lock duration"
@@ -598,7 +600,7 @@ contract SMD_v5 is Ownable {
     function withdraw(uint256 amount) external returns (bool) {
         require(
             block.timestamp >
-                deposits[msg.sender].initialStakeAt.add(
+                deposits[msg.sender].latestStakeAt.add(
                     lockDuration.mul(SECONDS_PER_HOUR)
                 ),
             "Can't withdraw before lock duration"

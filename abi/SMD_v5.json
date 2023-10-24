@@ -22,19 +22,19 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "period",
+          "name": "periodCounter",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "startBlock",
+          "name": "startDate",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "endBlock",
+          "name": "endDate",
           "type": "uint256"
         },
         {
@@ -113,15 +113,46 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
+          "indexed": true,
           "internalType": "uint256",
-          "name": "period",
+          "name": "periodCounter",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "totalParticipants",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "currentStakedBalance",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "endBlock",
+          "name": "totalReward",
+          "type": "uint256"
+        }
+      ],
+      "name": "Paused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "periodCounter",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "endDate",
           "type": "uint256"
         },
         {
@@ -160,21 +191,39 @@
       "type": "event"
     },
     {
-      "inputs": [],
-      "name": "ERC20Interface",
-      "outputs": [
+      "anonymous": false,
+      "inputs": [
         {
-          "internalType": "contract IERC20",
-          "name": "",
-          "type": "address"
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "periodCounter",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "totalParticipants",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "currentStakedBalance",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalReward",
+          "type": "uint256"
         }
       ],
-      "stateMutability": "view",
-      "type": "function"
+      "name": "UnPaused",
+      "type": "event"
     },
     {
       "inputs": [],
-      "name": "accShare",
+      "name": "SECONDS_PER_HOUR",
       "outputs": [
         {
           "internalType": "uint256",
@@ -187,7 +236,7 @@
     },
     {
       "inputs": [],
-      "name": "blocksPerHour",
+      "name": "accShare",
       "outputs": [
         {
           "internalType": "uint256",
@@ -245,7 +294,7 @@
     },
     {
       "inputs": [],
-      "name": "currentBlock",
+      "name": "currentStakedBalance",
       "outputs": [
         {
           "internalType": "uint256",
@@ -281,7 +330,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "period",
+          "name": "periodCounter",
           "type": "uint256"
         },
         {
@@ -291,17 +340,17 @@
         },
         {
           "internalType": "uint256",
-          "name": "rewPerBlock",
+          "name": "rewPerSecond",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "startingBlock",
+          "name": "startingDate",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "endingBlock",
+          "name": "endingDate",
           "type": "uint256"
         },
         {
@@ -315,7 +364,7 @@
     },
     {
       "inputs": [],
-      "name": "endingBlock",
+      "name": "endingDate",
       "outputs": [
         {
           "internalType": "uint256",
@@ -334,7 +383,7 @@
           "type": "uint256"
         }
       ],
-      "name": "extendPeriod",
+      "name": "extendCurrentPeriod",
       "outputs": [
         {
           "internalType": "bool",
@@ -417,7 +466,7 @@
     },
     {
       "inputs": [],
-      "name": "lastRewardBlock",
+      "name": "lastSharesUpdateTime",
       "outputs": [
         {
           "internalType": "uint256",
@@ -456,7 +505,14 @@
     },
     {
       "inputs": [],
-      "name": "period",
+      "name": "pause",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "periodCounter",
       "outputs": [
         {
           "internalType": "uint256",
@@ -465,6 +521,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "recoverLostERC20",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -488,42 +562,8 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_rewardAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_start",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_end",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_lockDuration",
-          "type": "uint256"
-        }
-      ],
-      "name": "resetAndsetStartEndBlock",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
-      "name": "rewPerBlock",
+      "name": "rewPerSecond",
       "outputs": [
         {
           "internalType": "uint256",
@@ -564,6 +604,40 @@
       "inputs": [
         {
           "internalType": "uint256",
+          "name": "_rewardAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_start",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_end",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_lockDuration",
+          "type": "uint256"
+        }
+      ],
+      "name": "setNewPeriod",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
         }
@@ -581,7 +655,7 @@
     },
     {
       "inputs": [],
-      "name": "stakedBalance",
+      "name": "stakedBalanceCurrPeriod",
       "outputs": [
         {
           "internalType": "uint256",
@@ -594,20 +668,7 @@
     },
     {
       "inputs": [],
-      "name": "stakedTotal",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "startingBlock",
+      "name": "startingDate",
       "outputs": [
         {
           "internalType": "uint256",
@@ -658,6 +719,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "totalStaked",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -666,6 +740,13 @@
         }
       ],
       "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "unPause",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -681,24 +762,36 @@
       "name": "userDeposits",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "latestStakeAt",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "latestClaimAt",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "userAccShare",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "currentPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct SMD_v5.Deposits",
+          "name": "deposit",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",

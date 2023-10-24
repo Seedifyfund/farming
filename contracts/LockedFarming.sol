@@ -574,7 +574,7 @@ contract SMD_v5 is Ownable {
         __updateShare();
         deposits[from].amount = deposits[from].amount.sub(amount);
         if (deposits[from].currentPeriod == periodCounter) {
-            stakedBalanceCurrPeriod -= stakedBalanceCurrPeriod.sub(amount);
+            stakedBalanceCurrPeriod -= amount;
         }
         bool paid = __payDirect(from, amount, tokenAddress);
         require(paid, "Error during withdraw");

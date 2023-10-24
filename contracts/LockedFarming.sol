@@ -69,8 +69,10 @@ contract SMD_v5 is Ownable {
     uint256 public totalParticipants;
     /// @dev expressed in hours, e.g. 7 days = 24 * 7 = 168.
     uint256 public lockDuration;
-    /// @notice whether the farming contract is paused or not.
-    /// @dev does prevent wallets from retrieving rewards, stake, withdraw, renew and see old rewards.
+    /**
+     * @notice whether prevent or not, wallets from staking, renewing staking, viewing old rewards,
+     *         claiming rewards (old and current period) and withdrawing. Only admin functions are allowed.
+     */
     bool public isPaused;
 
     /// @notice should be the last transfered token which is either {tokenAddress} or {rewardTokenAddress}.
@@ -136,6 +138,18 @@ contract SMD_v5 is Ownable {
         uint256 lockDuration,
         uint256 rewardAmount
     );
+    event Paused(
+        uint256 indexed periodCounter,
+        uint256 indexed totalParticipants,
+        uint256 indexed currentStakedBalance,
+        uint256 totalReward
+    );
+    event UnPaused(
+        uint256 indexed periodCounter,
+        uint256 indexed totalParticipants,
+        uint256 indexed currentStakedBalance,
+        uint256 totalReward
+    );
     event PeriodExtended(
         uint256 periodCounter,
         uint256 endDate,
@@ -172,7 +186,7 @@ contract SMD_v5 is Ownable {
     }
 
     /**
-     * @notice Config new period detailsa according to {setNewPeriod} parameters.
+     * @notice Config new period details according to {setNewPeriod} parameters.
      *
      * @param _start Seconds at which the period starts - in UNIX timestamp.
      * @param _end Seconds at which the period ends - in UNIX timestamp.
@@ -188,7 +202,6 @@ contract SMD_v5 is Ownable {
         endingDate = _end;
         lockDuration = _lockDuration;
         periodCounter++;
-        isPaused = false;
         lastSharesUpdateTime = _start;
     }
 
@@ -228,7 +241,6 @@ contract SMD_v5 is Ownable {
         totalReward = 0;
         stakedBalanceCurrPeriod = 0;
         totalParticipants = 0;
-        isPaused = true;
     }
 
     /**
@@ -274,7 +286,32 @@ contract SMD_v5 is Ownable {
             _lockDuration,
             _rewardAmount
         );
+
+        isPaused = false;
+
         return true;
+    }
+
+    function pause() external onlyOwner {
+        isPaused = true;
+
+        emit Paused(
+            periodCounter,
+            totalParticipants,
+            currentStakedBalance,
+            totalReward
+        );
+    }
+
+    function unPause() external onlyOwner {
+        isPaused = false;
+
+        emit UnPaused(
+            periodCounter,
+            totalParticipants,
+            currentStakedBalance,
+            totalReward
+        );
     }
 
     /// @notice update {accShare} and {lastSharesUpdateTime} for current period.
@@ -399,6 +436,7 @@ contract SMD_v5 is Ownable {
 
     /// @dev claim pending rewards of current period.
     function claimRewards() public returns (bool) {
+        require(!isPaused, "Contract paused");
         require(fetchUserShare(msg.sender) > 0, "No stakes found for user");
         return (__claimRewards(msg.sender));
     }
@@ -440,7 +478,7 @@ contract SMD_v5 is Ownable {
 
     function __renew(address from) private returns (bool) {
         __updateShare();
-        if (viewOldRewards(from) > 0) {
+        if (_viewOldRewards(from) > 0) {
             bool claimed = claimOldRewards();
             require(claimed, "Error paying old rewards");
         }
@@ -460,6 +498,10 @@ contract SMD_v5 is Ownable {
         require(!isPaused, "Contract paused");
         require(hasStaked[from], "No stakings found, please stake");
 
+        return _viewOldRewards(from);
+    }
+
+    function _viewOldRewards(address from) internal view returns (uint256) {
         if (deposits[from].currentPeriod == periodCounter) {
             return 0;
         }
@@ -594,6 +636,7 @@ contract SMD_v5 is Ownable {
 
     /// Withdraw `amount` deposited LP token after lock duration.
     function withdraw(uint256 amount) external returns (bool) {
+        require(!isPaused, "Contract paused");
         require(
             block.timestamp >
                 deposits[msg.sender].latestStakeAt.add(
@@ -609,7 +652,7 @@ contract SMD_v5 is Ownable {
             }
         }
 
-        if (viewOldRewards(msg.sender) > 0) {
+        if (_viewOldRewards(msg.sender) > 0) {
             bool oldRewardsPaid = claimOldRewards();
             require(oldRewardsPaid, "Error paying old rewards");
         }

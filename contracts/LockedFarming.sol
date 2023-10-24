@@ -138,6 +138,18 @@ contract SMD_v5 is Ownable {
         uint256 lockDuration,
         uint256 rewardAmount
     );
+    event Paused(
+        uint256 indexed periodCounter,
+        uint256 indexed totalParticipants,
+        uint256 indexed currentStakedBalance,
+        uint256 totalReward
+    );
+    event UnPaused(
+        uint256 indexed periodCounter,
+        uint256 indexed totalParticipants,
+        uint256 indexed currentStakedBalance,
+        uint256 totalReward
+    );
     event PeriodExtended(
         uint256 periodCounter,
         uint256 endDate,
@@ -278,6 +290,28 @@ contract SMD_v5 is Ownable {
         isPaused = false;
 
         return true;
+    }
+
+    function pause() external onlyOwner {
+        isPaused = true;
+
+        emit Paused(
+            periodCounter,
+            totalParticipants,
+            currentStakedBalance,
+            totalReward
+        );
+    }
+
+    function unPause() external onlyOwner {
+        isPaused = false;
+
+        emit UnPaused(
+            periodCounter,
+            totalParticipants,
+            currentStakedBalance,
+            totalReward
+        );
     }
 
     /// @notice update {accShare} and {lastSharesUpdateTime} for current period.

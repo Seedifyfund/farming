@@ -1,8 +1,5 @@
-import fs from 'fs';
-import '@nomiclabs/hardhat-waffle';
-import '@typechain/hardhat';
-import 'hardhat-preprocessor';
-import { HardhatUserConfig, task } from 'hardhat/config';
+import '@nomiclabs/hardhat-ethers';
+import { HardhatUserConfig } from 'hardhat/types';
 import '@nomiclabs/hardhat-etherscan';
 
 // use .env vars
@@ -20,14 +17,6 @@ const ETH_KEY = process.env.ETH_KEY;
 const ARB_RPC = process.env.ARB_RPC;
 const ARB_MAIN_RPC = process.env.ARB_MAIN_RPC;
 const ARB_KEY = process.env.ARB_KEY;
-
-function getRemappings() {
-    return fs
-        .readFileSync('remappings.txt', 'utf8')
-        .split('\n')
-        .filter(Boolean)
-        .map((line) => line.trim().split('='));
-}
 
 const config: HardhatUserConfig = {
     defaultNetwork: 'hardhat',
@@ -66,7 +55,13 @@ const config: HardhatUserConfig = {
         },
     },
     etherscan: {
-        apiKey: ETH_KEY,
+        apiKey: {
+            eth: ETH_KEY!,
+            sepolia: ETH_KEY!,
+            arb: ARB_KEY!,
+            arbGoerli: ARB_KEY!,
+            bscTest: BSC_KEY!,
+        },
     },
     solidity: {
         compilers: [
@@ -86,21 +81,6 @@ const config: HardhatUserConfig = {
         tests: './test',
         cache: './cache',
         artifacts: './artifacts',
-    },
-    // This fully resolves paths for imports in the ./lib directory for Hardhat
-    preprocess: {
-        eachLine: (hre) => ({
-            transform: (line: string) => {
-                if (line.match(/^\s*import /i)) {
-                    getRemappings().forEach(([find, replace]) => {
-                        if (line.match(find)) {
-                            line = line.replace(find, replace);
-                        }
-                    });
-                }
-                return line;
-            },
-        }),
     },
 
     mocha: {

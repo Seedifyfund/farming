@@ -1,4 +1,5 @@
 import { time } from '@nomicfoundation/hardhat-network-helpers';
+import { BigNumberish } from '@ethersproject/bignumber';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -66,8 +67,8 @@ describe('when renewing a staking action', () => {
         expect(await farmingContract.totalReward()).eq(toEth('1000'));
         expect(await farmingContract.rewardBalance()).eq(toEth('1000'));
 
-        await advanceToFuture(offset + 1);
-
+        await advanceToFuture(offset);
+        // stake directly at opening of period
         await farmingContract.connect(user).stake(toEth('1000'));
 
         await advanceToFuture(periodDuration);
@@ -83,8 +84,8 @@ describe('when renewing a staking action', () => {
             end,
             lockDuration
         );
-        await advanceToFuture(offset + 1);
-
+        await advanceToFuture(offset);
+        // renew directly at opening of new period
         await farmingContract.connect(user).renew();
 
         // await farmingContract.connect(user).claimOldRewards();

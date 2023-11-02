@@ -1,5 +1,4 @@
 import { time } from '@nomicfoundation/hardhat-network-helpers';
-import { BigNumberish } from '@ethersproject/bignumber';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -9,7 +8,11 @@ import {
     Token_Mock,
     Token_Mock__factory,
 } from '../typechain-types';
-import { advanceToFuture } from './fixtures/BlockchainUtils';
+import {
+    advanceToFuture,
+    toEth,
+    toDecimals,
+} from './fixtures/BlockchainUtils';
 
 describe('simulating mainnet test transaction locally', () => {
     let deployer: SignerWithAddress;
@@ -104,13 +107,5 @@ describe('simulating mainnet test transaction locally', () => {
         await advanceToFuture(deploymentTimestamp);
     });
 
-    it('then rewards are distributed to the serhat for previous periods', async () => {});
+    it('reproduces 1st period', async () => {});
 });
-
-function toEth(wei: string) {
-    return ethers.utils.parseEther(wei);
-}
-
-function toDecimals(wei: BigNumberish): string {
-    return ethers.utils.formatUnits(wei, 18);
-}

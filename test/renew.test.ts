@@ -1,5 +1,4 @@
 import { time } from '@nomicfoundation/hardhat-network-helpers';
-import { BigNumberish } from '@ethersproject/bignumber';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -9,7 +8,11 @@ import {
     Token_Mock,
     Token_Mock__factory,
 } from '../typechain-types';
-import { advanceToFuture } from './fixtures/BlockchainUtils';
+import {
+    advanceToFuture,
+    toEth,
+    toDecimals,
+} from './fixtures/BlockchainUtils';
 
 describe('when renewing a staking action', () => {
     let deployer: SignerWithAddress;
@@ -102,11 +105,3 @@ describe('when renewing a staking action', () => {
     it.skip('then deposit reference reflects new date', async () => {});
     it.skip('then balance of user staked tokens does not change', async () => {});
 });
-
-function toEth(wei: string) {
-    return ethers.utils.parseEther(wei);
-}
-
-function toDecimals(wei: BigNumberish): string {
-    return ethers.utils.formatUnits(wei, 18);
-}

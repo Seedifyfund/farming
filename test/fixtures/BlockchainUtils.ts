@@ -10,8 +10,8 @@ const toEth = (wei: string) => {
     return ethers.utils.parseEther(wei);
 };
 
-const toDecimals = (wei: BigNumberish): string => {
-    return ethers.utils.formatUnits(wei, 18);
+const toDecimals = (wei: BigNumberish): number => {
+    return parseFloat(ethers.utils.formatUnits(wei, 18));
 };
 
 export { advanceToFuture, toEth, toDecimals };

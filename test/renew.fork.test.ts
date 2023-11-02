@@ -19,8 +19,8 @@ import {
 describe('simulating mainnet test transaction locally', () => {
     let deployer: SignerWithAddress;
     let serhat: SignerWithAddress;
-    let bruno: SignerWithAddress;
     let julia: SignerWithAddress;
+    let bruno: SignerWithAddress;
     let rewardsToken: Token_Mock;
     let stakingToken: Token_Mock;
     let farmingContract: SMD_v5;
@@ -70,7 +70,7 @@ describe('simulating mainnet test transaction locally', () => {
                 at: 1698760054,
             },
         },
-        bruno: {
+        julia: {
             stake: {
                 amount: ethers.BigNumber.from('10000000000000000'),
                 at: 1698762839,
@@ -88,7 +88,7 @@ describe('simulating mainnet test transaction locally', () => {
                 at: 1698775949,
             },
         },
-        julia: {
+        bruno: {
             stake: {
                 amount: ethers.BigNumber.from('1949943940539'),
                 at: 1698772050,
@@ -106,7 +106,7 @@ describe('simulating mainnet test transaction locally', () => {
                 at: 1698780820,
             },
         },
-        julia: {
+        bruno: {
             stake: {
                 amount: ethers.BigNumber.from('1949943940539'),
                 at: 1698787130,
@@ -117,7 +117,7 @@ describe('simulating mainnet test transaction locally', () => {
     beforeEach(async () => {
         await time.increaseTo(deploymentTimestamp);
 
-        [deployer, serhat, bruno, julia] = await ethers.getSigners();
+        [deployer, serhat, julia, bruno] = await ethers.getSigners();
         stakingToken = await new Token_Mock__factory(deployer).deploy();
         rewardsToken = await new Token_Mock__factory(deployer).deploy();
         farmingContract = await new SMD_v5__factory(deployer).deploy(
@@ -127,8 +127,8 @@ describe('simulating mainnet test transaction locally', () => {
 
         await rewardsToken.mint(deployer.address, toEth('1000000'));
         await stakingToken.mint(serhat.address, toEth('100000'));
-        await stakingToken.mint(bruno.address, toEth('100000'));
         await stakingToken.mint(julia.address, toEth('100000'));
+        await stakingToken.mint(bruno.address, toEth('100000'));
         await rewardsToken
             .connect(deployer)
             .approve(farmingContract.address, toEth('1000000'));
@@ -136,7 +136,7 @@ describe('simulating mainnet test transaction locally', () => {
             .connect(serhat)
             .approve(farmingContract.address, toEth('1000000'));
         await stakingToken
-            .connect(julia)
+            .connect(bruno)
             .approve(farmingContract.address, toEth('1000000'));
     });
 
@@ -213,6 +213,64 @@ describe('simulating mainnet test transaction locally', () => {
             BigNumber.from('0')
         );
     });
+
+    it('reproduces 2nd period, until it is closed by 3rd period opening', async () => {
+        await wholePeriodOne();
+        await time.increaseTo(periodTwo.at);
+        await farmingContract.setNewPeriod(
+            periodTwo.rewardAmount,
+            periodTwo.start,
+            periodTwo.end,
+            periodTwo.lockDuration
+        );
+
+        ////////// user action //////////
+        // Serhat renews - does get 14.7 rewards
+        // Julia stakes
+
+        // closed by period 3 opening
+    });
+
+    it.skip('reproduces 3rd period, until it is closed by 4th period opening', async () => {
+        await wholePeriodOne();
+        // await wholePeriodTwo();
+        // open period 3
+
+        ////////// user action //////////
+        // Serhat renews - does not get any rewards
+        // Bruno stakes
+        // Serhat claims
+        // Bruno claims
+
+        // closed by period 4 opening
+    });
+
+    it.skip('reproduces 4th period - still running', async () => {
+        await wholePeriodOne();
+        // await wholePeriodTwo();
+        // await wholePeriodThree();
+        // open period 4
+
+        ////////// user action //////////
+        // Serhat renews - does get rewards
+        // Bruno stakes
+    });
+
+    async function wholePeriodOne() {
+        time.increaseTo(periodOne.at);
+        await farmingContract.setNewPeriod(
+            periodOne.rewardAmount,
+            periodOne.start,
+            periodOne.end,
+            periodOne.lockDuration
+        );
+
+        // Serhat stakes
+        await time.increaseTo(periodOneUserAction.serhat.stake.at);
+        await farmingContract
+            .connect(serhat)
+            .stake(periodOneUserAction.serhat.stake.amount);
+    }
 });
 
 const verifyEmptyStruct = (struct: any) => {

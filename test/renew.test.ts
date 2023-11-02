@@ -85,12 +85,18 @@ describe('when renewing a staking action', () => {
             lockDuration
         );
         await advanceToFuture(offset);
+
+        const rewToReceive = await farmingContract.viewOldRewards(
+            user.address
+        );
+
         // renew directly at opening of new period
         await farmingContract.connect(user).renew();
 
         // await farmingContract.connect(user).claimOldRewards();
 
-        expect(await rewardsToken.balanceOf(user.address)).gt(0);
+        console.log('\nuser will receive: ', toDecimals(rewToReceive));
+        expect(await rewardsToken.balanceOf(user.address)).eq(rewToReceive);
     });
 
     it.skip('then deposit reference reflects new date', async () => {});
@@ -99,4 +105,8 @@ describe('when renewing a staking action', () => {
 
 function toEth(wei: string) {
     return ethers.utils.parseEther(wei);
+}
+
+function toDecimals(wei: BigNumberish): string {
+    return ethers.utils.formatUnits(wei, 18);
 }

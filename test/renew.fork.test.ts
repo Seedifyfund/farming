@@ -23,9 +23,7 @@ describe('simulating mainnet test transaction locally', () => {
     let stakingToken: Token_Mock;
     let farmingContract: SMD_v5;
 
-    //Simulate the blockchain is 60s in future to prevent timestamp issues running time-based tests
-    const offset = 60;
-    const deploymentTimestamp = 1698648273;
+    const deploymentTimestamp = 1698691473;
     const periodOne = {
         at: 1698692920,
         rewardAmount: ethers.BigNumber.from('15000000000000000000'),

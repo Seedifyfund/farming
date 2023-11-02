@@ -14,6 +14,7 @@ const config: HardhatUserConfig = {
     networks: {
         hardhat: {
             chainId: 1337,
+            initialDate: '01 Jan 1970 00:00:00 GMT', // timestamp at 0
         },
         testnet: {
             url: `https://eth-sepolia.g.alchemy.com/v2/${secrets.alchemy.apiKey}`,

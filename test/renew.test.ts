@@ -30,42 +30,57 @@ describe('when renewing a staking action', () => {
             rewardsToken.address
         );
 
-        await rewardsToken.mint(deployer.address, 1000000);
-        await stakingToken.mint(user.address, 100000);
-        await stakingToken.mint(user2.address, 100000);
+        await rewardsToken.mint(deployer.address, toEth('1000000'));
+        await stakingToken.mint(user.address, toEth('100000'));
+        await stakingToken.mint(user2.address, toEth('100000'));
         await rewardsToken
             .connect(deployer)
-            .approve(farmingContract.address, 1000000);
+            .approve(farmingContract.address, toEth('1000000'));
         await stakingToken
             .connect(user)
-            .approve(farmingContract.address, 1000000);
+            .approve(farmingContract.address, toEth('1000000'));
         await stakingToken
             .connect(user2)
-            .approve(farmingContract.address, 1000000);
+            .approve(farmingContract.address, toEth('1000000'));
     });
 
     it('then rewards are distributed to the user for previous periods', async () => {
         let currentTime = await time.latest();
+        let start = currentTime + offset;
+
         const periodDuration = 30 * 60 * 60; //30 hours
+        let end = currentTime + offset + periodDuration;
+
         const lockDuration = 1;
+
+        console.log('end - start', end - start);
+
+        console.log('///////////// First Period /////////////');
         await farmingContract.setNewPeriod(
-            1000,
-            currentTime + offset,
-            currentTime + offset + periodDuration,
+            toEth('1000'),
+            start,
+            end,
             lockDuration
         );
 
+        expect(await farmingContract.totalReward()).eq(toEth('1000'));
+        expect(await farmingContract.rewardBalance()).eq(toEth('1000'));
+
         await advanceToFuture(offset + 1);
 
-        await farmingContract.connect(user).stake(1000);
+        await farmingContract.connect(user).stake(toEth('1000'));
 
         await advanceToFuture(periodDuration);
 
+        console.log('\n ///////////// Second Period /////////////');
         currentTime = await time.latest();
+        start = currentTime + offset;
+        end = currentTime + offset + periodDuration;
+
         await farmingContract.setNewPeriod(
-            1000,
-            currentTime + offset,
-            currentTime + offset + periodDuration,
+            toEth('1000'),
+            start,
+            end,
             lockDuration
         );
         await advanceToFuture(offset + 1);
@@ -80,3 +95,7 @@ describe('when renewing a staking action', () => {
     it.skip('then deposit reference reflects new date', async () => {});
     it.skip('then balance of user staked tokens does not change', async () => {});
 });
+
+function toEth(wei: string) {
+    return ethers.utils.parseEther(wei);
+}

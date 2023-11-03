@@ -8,29 +8,36 @@ import {
     SMD_v5__factory,
     Token_Mock,
     Token_Mock__factory,
+    SMD_v5_Mock,
+    SMD_v5_Mock__factory,
 } from '../../typechain-types';
 
 import { deploymentTimestamp } from './periods';
 import { toEth } from './BlockchainUtils';
 
-async function deployContracts() {
+async function deployContracts(isMock: boolean) {
     let deployer: SignerWithAddress;
     let serhat: SignerWithAddress;
     let julia: SignerWithAddress;
     let bruno: SignerWithAddress;
     let rewardsToken: Token_Mock;
     let stakingToken: Token_Mock;
-    let farmingContract: SMD_v5;
+    let farmingContract: SMD_v5 | SMD_v5_Mock;
 
     await time.increaseTo(deploymentTimestamp);
 
     [deployer, serhat, julia, bruno] = await ethers.getSigners();
     stakingToken = await new Token_Mock__factory(deployer).deploy();
     rewardsToken = await new Token_Mock__factory(deployer).deploy();
-    farmingContract = await new SMD_v5__factory(deployer).deploy(
-        stakingToken.address,
-        rewardsToken.address
-    );
+    farmingContract = isMock
+        ? await new SMD_v5_Mock__factory(deployer).deploy(
+              stakingToken.address,
+              rewardsToken.address
+          )
+        : await new SMD_v5__factory(deployer).deploy(
+              stakingToken.address,
+              rewardsToken.address
+          );
 
     await rewardsToken.mint(deployer.address, toEth('1000000'));
     await stakingToken.mint(serhat.address, toEth('100000'));
@@ -44,6 +51,9 @@ async function deployContracts() {
         .approve(farmingContract.address, toEth('1000000'));
     await stakingToken
         .connect(bruno)
+        .approve(farmingContract.address, toEth('1000000'));
+    await stakingToken
+        .connect(julia)
         .approve(farmingContract.address, toEth('1000000'));
 
     return {
@@ -62,5 +72,10 @@ const verifyEmptyStruct = (struct: any) => {
         expect(struct[i]).eq(ethers.BigNumber.from('0'));
     }
 };
+const verifyNotEmptyStruct = (struct: any) => {
+    for (let i = 0; i < struct.length; i++) {
+        expect(struct[i]).to.not.eq(ethers.BigNumber.from('0'));
+    }
+};
 
-export { deployContracts, verifyEmptyStruct };
+export { deployContracts, verifyEmptyStruct, verifyNotEmptyStruct };

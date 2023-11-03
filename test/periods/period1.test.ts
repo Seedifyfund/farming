@@ -72,7 +72,7 @@ describe('simulating mainnet period 1 locally', () => {
 
         const oldRewardBalance = await farmingContract.rewardBalance();
 
-        ////////// open period 2 //////////
+        ////////// closed by period 2 opening //////////
         await time.increaseTo(periodTwo.at);
         await farmingContract.setNewPeriod(
             periodTwo.rewardAmount,

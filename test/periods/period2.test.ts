@@ -16,6 +16,7 @@ import {
     periodTwo,
     periodThree,
     periodTwoUserAction,
+    periodOneUserAction,
 } from '../fixtures/periods';
 
 describe('simulating mainnet period 2 locally', () => {
@@ -61,7 +62,26 @@ describe('simulating mainnet period 2 locally', () => {
         expect(verifyNotEmptyStruct(await farmingContractMock.endAccShare(2)));
     });
 
-    it('uses SMD_v5_Mock and reproduces 2nd period, until it is closed by 3rd period opening', async () => {
+    it('verifies, withdraw() call does save current opened period detailed as if it was closed', async () => {
+        await wholePeriodOne(time, farmingContractMock, serhat);
+        await time.increaseTo(periodTwo.at);
+        await farmingContractMock.setNewPeriod(
+            periodTwo.rewardAmount,
+            periodTwo.start,
+            periodTwo.end,
+            periodTwo.lockDuration
+        );
+
+        // jump to serhat renewal timetsamp
+        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        // Serhat renews - does get 14.7 rewards
+        await farmingContract
+            .connect(serhat)
+            .withdraw(periodOneUserAction.serhat.stake.amount);
+
+        expect(verifyNotEmptyStruct(await farmingContractMock.endAccShare(2)));
+    });
+
         await wholePeriodOne(time, farmingContractMock, serhat);
         await time.increaseTo(periodTwo.at);
         await farmingContractMock.setNewPeriod(

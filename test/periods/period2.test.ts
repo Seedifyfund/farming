@@ -43,6 +43,24 @@ describe('simulating mainnet period 2 locally', () => {
         farmingContractMock = farmingContract as SMD_v5_Mock;
     });
 
+    it('verifies, renew() call does save current opened period detailed as if it was closed', async () => {
+        await wholePeriodOne(time, farmingContractMock, serhat);
+        await time.increaseTo(periodTwo.at);
+        await farmingContractMock.setNewPeriod(
+            periodTwo.rewardAmount,
+            periodTwo.start,
+            periodTwo.end,
+            periodTwo.lockDuration
+        );
+
+        // jump to serhat renewal timetsamp
+        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        // Serhat renews - does get 14.7 rewards
+        await farmingContractMock.connect(serhat).renew();
+
+        expect(verifyNotEmptyStruct(await farmingContractMock.endAccShare(2)));
+    });
+
     it('uses SMD_v5_Mock and reproduces 2nd period, until it is closed by 3rd period opening', async () => {
         await wholePeriodOne(time, farmingContractMock, serhat);
         await time.increaseTo(periodTwo.at);

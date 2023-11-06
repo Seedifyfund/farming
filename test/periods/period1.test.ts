@@ -22,6 +22,7 @@ describe('simulating mainnet period 1 locally', () => {
     let farmingContract: SMD_v5;
 
     beforeEach(async () => {
+        const isMock: boolean = false;
         ({
             deployer,
             serhat,
@@ -30,7 +31,7 @@ describe('simulating mainnet period 1 locally', () => {
             rewardsToken,
             stakingToken,
             farmingContract,
-        } = await deployContracts());
+        } = await deployContracts(isMock));
     });
 
     it('reproduces 1st period, until it is closed by 2nd period opening', async () => {

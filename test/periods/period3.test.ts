@@ -65,6 +65,10 @@ describe('simulating mainnet period 3 locally', () => {
         expect(await rewardsToken.balanceOf(serhat.address)).eq(
             oldSerhatBalance
         );
+
+        // Julia tries to renew BUT it fails due to underflow in _viewOldRewards(), `uint256 rew = ...`, line 518
+        await expect(farmingContract.connect(julia).renew()).to.be.reverted;
+
         // Bruno stakes
         await time.increaseTo(periodThreeUserAction.bruno.stake.at);
         await farmingContract

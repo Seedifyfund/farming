@@ -179,7 +179,10 @@ describe('simulating mainnet period 2 locally', () => {
         console.log('oldAccShare', oldAccShare.toString());
 
         // verify renew() creates issue - save the current period 2 details before its end
-        verifyNotEmptyStruct(await farmingContract.endAccShare(2));
+        const periodTwoEndAccShare = await farmingContract.endAccShare(2);
+        verifyNotEmptyStruct(periodTwoEndAccShare);
+        // as period 2 is saved, `accShare` must be eq `endAccShare.accShare`
+        expect(oldAccShare).eq(periodTwoEndAccShare.accShare);
 
         ////// jump to julia stake timestamp
         await time.increaseTo(periodTwoUserAction.julia.stake.at);

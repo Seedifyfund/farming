@@ -157,4 +157,71 @@ describe('simulating mainnet period 2 locally', () => {
         // verify opening period 3, saved details of period 2 in `endAccShare`
         expect(verifyNotEmptyStruct(await farmingContractMock.endAccShare(2)));
     });
+
+    it('reproduces 2nd period issues, until it is closed by 4th period opening - __saveOldPeriod()', async () => {
+        await wholePeriodOne(time, farmingContract, serhat);
+        await time.increaseTo(periodTwo.at);
+        await farmingContract.setNewPeriod(
+            periodTwo.rewardAmount,
+            periodTwo.start,
+            periodTwo.end,
+            periodTwo.lockDuration
+        );
+        expect(await farmingContract.periodCounter()).eq(2);
+
+        ////////// user action //////////
+        ////// jump to serhat renewal timetsamp
+        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        // Serhat renews - does get 14.7 rewards
+        await farmingContract.connect(serhat).renew();
+
+        const oldAccShare = await farmingContract.accShare();
+        console.log('oldAccShare', oldAccShare.toString());
+
+        // verify renew() creates issue - save the current period 2 details before its end
+        verifyNotEmptyStruct(await farmingContract.endAccShare(2));
+
+        ////// jump to julia stake timestamp
+        await time.increaseTo(periodTwoUserAction.julia.stake.at);
+        // Julia stakes
+        await farmingContract
+            .connect(julia)
+            .stake(periodTwoUserAction.julia.stake.amount);
+
+        const juliaDeposit = await farmingContract.userDeposits(julia.address);
+        console.log(
+            'juliaDeposit.userAccShare',
+            juliaDeposit.userAccShare.toString()
+        );
+        /* console.log('juliaDeposit.amount', toDecimals(juliaDeposit.amount));
+        console.log(
+            'juliaDeposit.latestStakeAt',
+            juliaDeposit.latestStakeAt
+        );
+        console.log(
+            'juliaDeposit.latestClaimAt',
+            juliaDeposit.latestClaimAt
+        ); 
+         console.log(
+             'juliaDeposit.currentPeriod',
+             juliaDeposit.currentPeriod.toString()
+         ); */
+
+        // accShare and total staked should be updated
+        const newAccShare = await farmingContract.accShare();
+        console.log('accShare AFTER Julia stake', newAccShare.toString());
+        // accumulated shared should be increased as time pass between new stakes
+        expect(newAccShare).to.be.gt(oldAccShare);
+
+        ////////// closed by period 3 opening //////////
+        await time.increaseTo(periodThree.at);
+        //// period detailed saved due to {__saveOldPeriod} bug
+        verifyNotEmptyStruct(await farmingContract.endAccShare(2));
+        await farmingContract.setNewPeriod(
+            periodThree.rewardAmount,
+            periodThree.start,
+            periodThree.end,
+            periodThree.lockDuration
+        );
+    });
 });

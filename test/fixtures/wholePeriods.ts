@@ -14,7 +14,7 @@ import {
 
 async function wholePeriodOne(
     time: any,
-    farmingContract: SMD_v5,
+    farmingContract: SMD_v5 | SMD_v5_Mock,
     serhat: SignerWithAddress
 ) {
     time.increaseTo(periodOne.at);
@@ -34,7 +34,7 @@ async function wholePeriodOne(
 
 async function wholePeriodTwo(
     time: any,
-    farmingContract: SMD_v5,
+    farmingContract: SMD_v5 | SMD_v5_Mock,
     serhat: SignerWithAddress,
     julia: SignerWithAddress
 ) {
@@ -48,12 +48,18 @@ async function wholePeriodTwo(
 
     // Serhat renews
     await time.increaseTo(periodTwoUserAction.serhat.renew.at);
-    await farmingContract.connect(serhat).renew();
+    isMock(farmingContract)
+        ? await farmingContract.connect(serhat).workaround_renew()
+        : await farmingContract.connect(serhat).renew();
     // Juia stakes
     await time.increaseTo(periodTwoUserAction.julia.stake.at);
     await farmingContract
         .connect(julia)
         .stake(periodTwoUserAction.julia.stake.amount);
+}
+
+function isMock(object: any): object is SMD_v5_Mock {
+    return 'workaround_renew' in object;
 }
 
 export { wholePeriodOne, wholePeriodTwo };

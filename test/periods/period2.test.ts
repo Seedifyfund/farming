@@ -138,6 +138,11 @@ describe('simulating mainnet period 2 locally', () => {
         // accShare and total staked should be updated
         const newAccShare = await farmingContractMock.accShare();
         console.log('accShare AFTER Julia stake', toDecimals(newAccShare));
+        // accShare and userDeposits(julia.address).accShare should be equal
+        const juliaDeposit = await farmingContractMock.userDeposits(
+            julia.address
+        );
+        expect(juliaDeposit.userAccShare).eq(newAccShare);
         // accumulated shared should be increased as time pass between new stakes
         expect(newAccShare).to.be.gt(oldAccShare);
         expect(await farmingContractMock.totalStaked()).to.be.gt(

@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { SMD_v5, Token_Mock } from '../../typechain-types';
+import { SMD_v5, SMD_v5_Mock } from '../../typechain-types';
 import {
     periodOne,
     periodTwo,
@@ -32,4 +32,28 @@ async function wholePeriodOne(
         .stake(periodOneUserAction.serhat.stake.amount);
 }
 
-export { wholePeriodOne };
+async function wholePeriodTwo(
+    time: any,
+    farmingContract: SMD_v5,
+    serhat: SignerWithAddress,
+    julia: SignerWithAddress
+) {
+    time.increaseTo(periodTwo.at);
+    await farmingContract.setNewPeriod(
+        periodTwo.rewardAmount,
+        periodTwo.start,
+        periodTwo.end,
+        periodTwo.lockDuration
+    );
+
+    // Serhat renews
+    await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+    await farmingContract.connect(serhat).renew();
+    // Juia stakes
+    await time.increaseTo(periodTwoUserAction.julia.stake.at);
+    await farmingContract
+        .connect(julia)
+        .stake(periodTwoUserAction.julia.stake.amount);
+}
+
+export { wholePeriodOne, wholePeriodTwo };

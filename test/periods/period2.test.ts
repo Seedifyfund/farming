@@ -119,7 +119,9 @@ describe('simulating mainnet period 2 locally', () => {
         );
         // Serhat renews - does get 14.7 rewards
         await farmingContractMock.connect(serhat).workaround_renew();
-
+        // verify renew() does not save the current period 2 details at all
+        verifyEmptyStruct(await farmingContractMock.endAccShare(2));
+        // Verify Serhat received rewards
         expect(await rewardsToken.balanceOf(serhat.address)).eq(toReceive);
         expect(toDecimals(toReceive)).to.be.closeTo(14.7, 0.1);
 
@@ -146,5 +148,13 @@ describe('simulating mainnet period 2 locally', () => {
         await time.increaseTo(periodThree.at);
         //// period detailed not saved yet as no function called {__saveOldPeriod} yet
         verifyEmptyStruct(await farmingContractMock.endAccShare(2));
+        await farmingContractMock.setNewPeriod(
+            periodThree.rewardAmount,
+            periodThree.start,
+            periodThree.end,
+            periodThree.lockDuration
+        );
+        // verify opening period 3, saved details of period 2 in `endAccShare`
+        expect(verifyNotEmptyStruct(await farmingContractMock.endAccShare(2)));
     });
 });

@@ -5,6 +5,7 @@ broadcast/
 
 # JS
 node_modules/
+yarn-error.log
 
 #Hardhat files
 cache_hardhat/
@@ -20,3 +21,5 @@ typechain-types/
 
 # VS Code
 .vscode-upload.json
+
+secrets.json

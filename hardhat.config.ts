@@ -20,12 +20,22 @@ const config: HardhatUserConfig = {
             url: `https://eth-sepolia.g.alchemy.com/v2/${secrets.alchemy.apiKey}`,
             accounts: [secrets.accounts.deployer],
         },
+        eth: {
+            url: `https://eth-mainnet.g.alchemy.com/v2/${secrets.alchemy.apiKey}`,
+            accounts: [secrets.accounts.deployer],
+        },
+        arb: {
+            url: `https://arb-mainnet.g.alchemy.com/v2/${secrets.alchemy.apiKey}`,
+            accounts: [secrets.accounts.deployer],
+        },
     },
     etherscan: {
         apiKey: {
             polygon: secrets?.verification?.polygonscan,
             polygonMumbai: secrets?.verification?.polygonscan,
             sepolia: secrets?.verification?.etherscan,
+            arbitrum: secrets?.verification?.arbiscan,
+            ethereum: secrets?.verification?.etherscan,
         },
     },
     solidity: {

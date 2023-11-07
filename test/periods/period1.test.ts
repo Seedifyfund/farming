@@ -7,6 +7,7 @@ import { BigNumber } from '@ethersproject/bignumber';
 import { SMD_v5, Token_Mock } from '../../typechain-types';
 import { deployContracts, verifyEmptyStruct } from '../fixtures/TestUtils';
 import {
+    deploymentTimestamp,
     periodOne,
     periodOneUserAction,
     periodTwo,
@@ -36,12 +37,14 @@ describe('simulating mainnet period 1 locally', () => {
 
     it('reproduces 1st period, until it is closed by 2nd period opening', async () => {
         ////////// period 1 set up //////////
-        time.increaseTo(periodOne.at);
+        await time.increase(periodOne.at);
+        let currentTime = await time.latest();
+        const oldTime = currentTime;
 
         await farmingContract.setNewPeriod(
             periodOne.rewardAmount,
-            periodOne.start,
-            periodOne.end,
+            currentTime + periodOne.start,
+            currentTime + periodOne.end,
             periodOne.lockDuration
         );
         expect(await farmingContract.totalReward()).eq(periodOne.rewardAmount);
@@ -50,7 +53,7 @@ describe('simulating mainnet period 1 locally', () => {
         );
 
         ////////// user action //////////
-        await time.increaseTo(periodOneUserAction.serhat.stake.at);
+        await time.increase(periodOneUserAction.serhat.stake.at);
         await farmingContract
             .connect(serhat)
             .stake(periodOneUserAction.serhat.stake.amount);
@@ -74,11 +77,12 @@ describe('simulating mainnet period 1 locally', () => {
         const oldRewardBalance = await farmingContract.rewardBalance();
 
         ////////// closed by period 2 opening //////////
-        await time.increaseTo(periodTwo.at);
+        await time.increase(periodTwo.at);
+        currentTime = await time.latest();
         await farmingContract.setNewPeriod(
             periodTwo.rewardAmount,
-            periodTwo.start,
-            periodTwo.end,
+            currentTime + periodTwo.start,
+            currentTime + periodTwo.end,
             periodTwo.lockDuration
         );
         expect(await farmingContract.periodCounter()).eq(2);
@@ -91,8 +95,10 @@ describe('simulating mainnet period 1 locally', () => {
         expect(periodOneEndAccShare.rewPerSecond).eq(
             periodOne.rewardAmount.div(periodOne.end - periodOne.start)
         );
-        expect(periodOneEndAccShare.startingDate).eq(periodOne.start);
-        expect(periodOneEndAccShare.endingDate).eq(periodOne.end);
+        expect(periodOneEndAccShare.startingDate).eq(
+            oldTime + periodOne.start
+        );
+        expect(periodOneEndAccShare.endingDate).eq(oldTime + periodOne.end);
         expect(periodOneEndAccShare.rewards).eq(rewBalance);
         // check current period 2 details are set to 0
         verifyEmptyStruct(await farmingContract.endAccShare(2));

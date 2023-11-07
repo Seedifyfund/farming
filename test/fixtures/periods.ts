@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 //
 // 1698691473 - deployment
 //
-// 1698692920 - period 1 at | start: 1698694200 | end: 1698753600       // set up 1,447s after deployment (24m 7s) | starts 1,280s after set up (21m 20s) | ends 59,400s after start (16h 30m) 
+// 1698692920 - period 1 at | start: 1698694200 | end: 1698753600       // set up 1,447s after deployment (24m 7s) | starts 1,280s after set up (21m 20s) | ends 59,400s after start (16h 30m)
 // Serhat stake at: 1698695348                                          // stake 2,428s after set up (40m 28s)
 //
 // 1698756395 - period 2 at | start: 1698756600 | end: 1698764400       // set up 61,047 after Serhat stakes (16h 57m 27s) | starts 205s after set up (40m 28s) | ends 7,800s after start (2h 10m)
@@ -21,10 +21,9 @@ import { ethers } from 'hardhat';
 // Serhat renew at: 1698780820                                          // renew 719s after set up (11m 59s)
 // Bruno stake at: 1698787130                                           // stake 6,310s after renew (1h 45m 10s)
 
-
 const deploymentTimestamp = 1698691473;
 //////////////////////////////////////////////////////////////////////////////////////////////
-////////////////// timestamp are relative to previous on-chain transactions ////////////////// 
+////////////////// timestamp are relative to previous on-chain transactions //////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////// Period 1 transaction details ////////////////

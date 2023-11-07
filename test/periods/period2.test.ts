@@ -5,7 +5,7 @@ import { ethers } from 'hardhat';
 import { BigNumber } from '@ethersproject/bignumber';
 
 import { SMD_v5, Token_Mock, SMD_v5_Mock } from '../../typechain-types';
-import { toEth, toDecimals } from '../fixtures/BlockchainUtils';
+import { toDecimals } from '../fixtures/BlockchainUtils';
 import {
     deployContracts,
     verifyNotEmptyStruct,
@@ -46,16 +46,17 @@ describe('simulating mainnet period 2 locally', () => {
 
     it('verifies issue, renew() call does save current opened period detailed as if it was closed', async () => {
         await wholePeriodOne(time, farmingContractMock, serhat);
-        await time.increaseTo(periodTwo.at);
+        await time.increase(periodTwo.at);
+        let currentTime = await time.latest();
         await farmingContractMock.setNewPeriod(
             periodTwo.rewardAmount,
-            periodTwo.start,
-            periodTwo.end,
+            currentTime + periodTwo.start,
+            currentTime + periodTwo.end,
             periodTwo.lockDuration
         );
 
         // jump to serhat renewal timetsamp
-        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        await time.increase(periodTwoUserAction.serhat.renew.at);
         // Simulate Serhat renew - this should not save the current period number 2 at all
         await farmingContractMock.connect(serhat).renew();
         // here it has saved period number 2 details
@@ -64,16 +65,17 @@ describe('simulating mainnet period 2 locally', () => {
 
     it('verifies issue, withdraw() call does save current opened period detailed as if it was closed', async () => {
         await wholePeriodOne(time, farmingContractMock, serhat);
-        await time.increaseTo(periodTwo.at);
+        await time.increase(periodTwo.at);
+        let currentTime = await time.latest();
         await farmingContractMock.setNewPeriod(
             periodTwo.rewardAmount,
-            periodTwo.start,
-            periodTwo.end,
+            currentTime + periodTwo.start,
+            currentTime + periodTwo.end,
             periodTwo.lockDuration
         );
 
         // jump to serhat renewal timetsamp
-        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        await time.increase(periodTwoUserAction.serhat.renew.at);
         // Simulate Serhat withdrawl - this should not save the current period number 2 at all
         await farmingContract
             .connect(serhat)
@@ -84,16 +86,17 @@ describe('simulating mainnet period 2 locally', () => {
 
     it('verifies issue, claimOldRewards() call does save current opened period detailed as if it was closed', async () => {
         await wholePeriodOne(time, farmingContractMock, serhat);
-        await time.increaseTo(periodTwo.at);
+        await time.increase(periodTwo.at);
+        let currentTime = await time.latest();
         await farmingContractMock.setNewPeriod(
             periodTwo.rewardAmount,
-            periodTwo.start,
-            periodTwo.end,
+            currentTime + periodTwo.start,
+            currentTime + periodTwo.end,
             periodTwo.lockDuration
         );
 
         // jump to serhat renewal timetsamp
-        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        await time.increase(periodTwoUserAction.serhat.renew.at);
         // Simulate Serhat claim old rewards - this should not save the current period number 2 at all
         await farmingContract.connect(serhat).claimOldRewards();
         // here it has saved period number 2 details
@@ -102,18 +105,22 @@ describe('simulating mainnet period 2 locally', () => {
 
     it('corrects 2nd period behaviours - __saveOldPeriod fix', async () => {
         await wholePeriodOne(time, farmingContractMock, serhat);
-        await time.increaseTo(periodTwo.at);
+        await time.increase(periodTwo.at);
+        let currentTime = await time.latest();
+        console.log('currentTime', currentTime);
+        console.log('start', currentTime + periodTwo.start);
+        console.log('end', currentTime + periodTwo.end);
         await farmingContractMock.setNewPeriod(
             periodTwo.rewardAmount,
-            periodTwo.start,
-            periodTwo.end,
+            currentTime + periodTwo.start,
+            currentTime + periodTwo.end,
             periodTwo.lockDuration
         );
         expect(await farmingContractMock.periodCounter()).eq(2);
 
         ////////// user action //////////
         // jump to serhat renewal timetsamp
-        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        await time.increase(periodTwoUserAction.serhat.renew.at);
         const toReceive = await farmingContractMock.viewOldRewards(
             serhat.address
         );
@@ -126,7 +133,7 @@ describe('simulating mainnet period 2 locally', () => {
         expect(toDecimals(toReceive)).to.be.closeTo(14.7, 0.1);
 
         // jump to julia stake timestamp
-        await time.increaseTo(periodTwoUserAction.julia.stake.at);
+        await time.increase(periodTwoUserAction.julia.stake.at);
         const oldAccShare = await farmingContractMock.accShare();
         console.log('oldAccShare', toDecimals(oldAccShare));
         const oldTotalStaked = await farmingContractMock.totalStaked();
@@ -150,13 +157,14 @@ describe('simulating mainnet period 2 locally', () => {
         );
 
         ////////// closed by period 3 opening //////////
-        await time.increaseTo(periodThree.at);
+        await time.increase(periodThree.at);
         //// period detailed not saved yet as no function called {__saveOldPeriod} yet
         verifyEmptyStruct(await farmingContractMock.endAccShare(2));
+        currentTime = await time.latest();
         await farmingContractMock.setNewPeriod(
             periodThree.rewardAmount,
-            periodThree.start,
-            periodThree.end,
+            currentTime + periodThree.start,
+            currentTime + periodThree.end,
             periodThree.lockDuration
         );
         // verify opening period 3, saved details of period 2 in `endAccShare`
@@ -165,18 +173,19 @@ describe('simulating mainnet period 2 locally', () => {
 
     it('reproduces 2nd period issues, until it is closed by 4th period opening - __saveOldPeriod()', async () => {
         await wholePeriodOne(time, farmingContract, serhat);
-        await time.increaseTo(periodTwo.at);
+        await time.increase(periodTwo.at);
+        let currentTime = await time.latest();
         await farmingContract.setNewPeriod(
             periodTwo.rewardAmount,
-            periodTwo.start,
-            periodTwo.end,
+            currentTime + periodTwo.start,
+            currentTime + periodTwo.end,
             periodTwo.lockDuration
         );
         expect(await farmingContract.periodCounter()).eq(2);
 
         ////////// user action //////////
         ////// jump to serhat renewal timetsamp
-        await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+        await time.increase(periodTwoUserAction.serhat.renew.at);
         // Serhat renews - does get 14.7 rewards
         await farmingContract.connect(serhat).renew();
 
@@ -190,7 +199,7 @@ describe('simulating mainnet period 2 locally', () => {
         expect(oldAccShare).eq(periodTwoEndAccShare.accShare);
 
         ////// jump to julia stake timestamp
-        await time.increaseTo(periodTwoUserAction.julia.stake.at);
+        await time.increase(periodTwoUserAction.julia.stake.at);
         // Julia stakes
         await farmingContract
             .connect(julia)
@@ -222,13 +231,14 @@ describe('simulating mainnet period 2 locally', () => {
         expect(newAccShare).to.be.gt(oldAccShare);
 
         ////////// closed by period 3 opening //////////
-        await time.increaseTo(periodThree.at);
+        await time.increase(periodThree.at);
         //// period detailed saved due to {__saveOldPeriod} bug
         verifyNotEmptyStruct(await farmingContract.endAccShare(2));
+        currentTime = await time.latest();
         await farmingContract.setNewPeriod(
             periodThree.rewardAmount,
-            periodThree.start,
-            periodThree.end,
+            currentTime + periodThree.start,
+            currentTime + periodThree.end,
             periodThree.lockDuration
         );
     });

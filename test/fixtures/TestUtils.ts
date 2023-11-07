@@ -12,7 +12,6 @@ import {
     SMD_v5_Mock__factory,
 } from '../../typechain-types';
 
-import { deploymentTimestamp } from './periods';
 import { toEth } from './BlockchainUtils';
 
 async function deployContracts(isMock: boolean) {
@@ -24,7 +23,8 @@ async function deployContracts(isMock: boolean) {
     let stakingToken: Token_Mock;
     let farmingContract: SMD_v5 | SMD_v5_Mock;
 
-    await time.increaseTo(deploymentTimestamp);
+    // deploy at timestamp hardhat.initialDate (0 in our case)
+    time.increase(60);
 
     [deployer, serhat, julia, bruno] = await ethers.getSigners();
     stakingToken = await new Token_Mock__factory(deployer).deploy();

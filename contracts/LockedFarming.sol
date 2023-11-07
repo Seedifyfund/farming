@@ -223,8 +223,11 @@ contract SMD_v5 is Ownable {
 
     /// save the details of the last ended period.
     function __saveOldPeriod() private {
-        // only save old period if it has not been saved before
-        if (endAccShare[periodCounter].startingDate == 0) {
+        // only save old period if it has ended & not been saved before
+        if (
+            block.timestamp > endingDate &&
+            endAccShare[periodCounter].startingDate == 0
+        ) {
             endAccShare[periodCounter] = PeriodDetails(
                 periodCounter,
                 accShare,

@@ -23,8 +23,8 @@ async function deployContracts(isMock: boolean) {
     let stakingToken: Token_Mock;
     let farmingContract: SMD_v5 | SMD_v5_Mock;
 
-    // deploy at timestamp hardhat.initialDate (0 in our case)
-    time.increase(60);
+    // each new test is deployed 1 week later than previous one
+    await time.increase(60 * 60 * 24 * 7);
 
     [deployer, serhat, julia, bruno] = await ethers.getSigners();
     stakingToken = await new Token_Mock__factory(deployer).deploy();

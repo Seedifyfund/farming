@@ -43,11 +43,12 @@ describe('simulating mainnet period 3 locally', () => {
         await wholePeriodOne(time, farmingContract, serhat);
         await wholePeriodTwo(time, farmingContract, serhat, julia);
         // open period 3
-        time.increaseTo(periodThree.at);
+        await time.increase(periodThree.at);
+        let currentTime = await time.latest();
         await farmingContract.setNewPeriod(
             periodThree.rewardAmount,
-            periodThree.start,
-            periodThree.end,
+            currentTime + periodThree.start,
+            currentTime + periodThree.end,
             periodThree.lockDuration
         );
         expect(await farmingContract.periodCounter()).eq(3);
@@ -58,7 +59,7 @@ describe('simulating mainnet period 3 locally', () => {
         const oldSerhatBalance = await rewardsToken.balanceOf(serhat.address);
         const oldBrunoBalance = await rewardsToken.balanceOf(bruno.address);
         // Serhat renews - does not get any rewards
-        await time.increaseTo(periodThreeUserAction.serhat.renew.at);
+        await time.increase(periodThreeUserAction.serhat.renew.at);
         // renew will not save the previous period 3 BUT only because Serhat's rewards from period 2 are lost forever
         await farmingContract.connect(serhat).renew();
         // Serhat should have received rewards BUT does not
@@ -70,12 +71,12 @@ describe('simulating mainnet period 3 locally', () => {
         await expect(farmingContract.connect(julia).renew()).to.be.reverted;
 
         // Bruno stakes
-        await time.increaseTo(periodThreeUserAction.bruno.stake.at);
+        await time.increase(periodThreeUserAction.bruno.stake.at);
         await farmingContract
             .connect(bruno)
             .stake(periodThreeUserAction.bruno.stake.amount);
         // Serhat claims
-        await time.increaseTo(periodThreeUserAction.serhat.claim.at);
+        await time.increase(periodThreeUserAction.serhat.claim.at);
         await farmingContract.connect(serhat).claimRewards();
         const serhatNewBalance = toDecimals(
             oldSerhatBalance.add(periodThreeUserAction.serhat.claim.received)
@@ -85,7 +86,7 @@ describe('simulating mainnet period 3 locally', () => {
         ).to.be.eq(serhatNewBalance);
 
         // Bruno claims
-        await time.increaseTo(periodThreeUserAction.bruno.claim.at);
+        await time.increase(periodThreeUserAction.bruno.claim.at);
         await farmingContract.connect(bruno).claimRewards();
         const brunoNewBalance = toDecimals(
             oldBrunoBalance.add(periodThreeUserAction.bruno.claim.received)
@@ -95,11 +96,12 @@ describe('simulating mainnet period 3 locally', () => {
         ).to.be.closeTo(brunoNewBalance, 0.00000000000000001);
 
         // closed by period 4 opening
-        time.increaseTo(periodFour.at);
+        await time.increase(periodFour.at);
+        currentTime = await time.latest();
         await farmingContract.setNewPeriod(
             periodFour.rewardAmount,
-            periodFour.start,
-            periodFour.end,
+            currentTime + periodFour.start,
+            currentTime + periodFour.end,
             periodFour.lockDuration
         );
         expect(await farmingContract.periodCounter()).eq(4);
@@ -121,11 +123,12 @@ describe('simulating mainnet period 3 locally', () => {
         await wholePeriodOne(time, farmingContractMock, serhat);
         await wholePeriodTwo(time, farmingContractMock, serhat, julia);
         // open period 3
-        time.increaseTo(periodThree.at);
+        await time.increase(periodThree.at);
+        let currentTime = await time.latest();
         await farmingContractMock.setNewPeriod(
             periodThree.rewardAmount,
-            periodThree.start,
-            periodThree.end,
+            currentTime + periodThree.start,
+            currentTime + periodThree.end,
             periodThree.lockDuration
         );
         expect(await farmingContractMock.periodCounter()).eq(3);
@@ -136,7 +139,7 @@ describe('simulating mainnet period 3 locally', () => {
         let oldSerhatBalance = await rewardsToken.balanceOf(serhat.address);
         const oldBrunoBalance = await rewardsToken.balanceOf(bruno.address);
         //// Serhat renews - get rewards from period 2
-        await time.increaseTo(periodThreeUserAction.serhat.renew.at);
+        await time.increase(periodThreeUserAction.serhat.renew.at);
         await farmingContractMock.connect(serhat).renew();
         // renew has saved not the previous period 3 as it should
         expect(verifyEmptyStruct(await farmingContract.endAccShare(3)));
@@ -147,12 +150,12 @@ describe('simulating mainnet period 3 locally', () => {
         // update Serhat rewards again
         oldSerhatBalance = await rewardsToken.balanceOf(serhat.address);
         //// Bruno stakes
-        await time.increaseTo(periodThreeUserAction.bruno.stake.at);
+        await time.increase(periodThreeUserAction.bruno.stake.at);
         await farmingContractMock
             .connect(bruno)
             .stake(periodThreeUserAction.bruno.stake.amount);
         // Serhat claims
-        await time.increaseTo(periodThreeUserAction.serhat.claim.at);
+        await time.increase(periodThreeUserAction.serhat.claim.at);
         await farmingContractMock.connect(serhat).claimRewards();
         const serhatNewBalance = toDecimals(
             oldSerhatBalance.add(periodThreeUserAction.serhat.claim.received)
@@ -162,7 +165,7 @@ describe('simulating mainnet period 3 locally', () => {
         ).to.be.eq(serhatNewBalance);
 
         // Bruno claims
-        await time.increaseTo(periodThreeUserAction.bruno.claim.at);
+        await time.increase(periodThreeUserAction.bruno.claim.at);
         await farmingContractMock.connect(bruno).claimRewards();
         const brunoNewBalance = toDecimals(
             oldBrunoBalance.add(periodThreeUserAction.bruno.claim.received)
@@ -172,11 +175,12 @@ describe('simulating mainnet period 3 locally', () => {
         ).to.be.closeTo(brunoNewBalance, 0.00000000000000001);
 
         // closed by period 4 opening
-        time.increaseTo(periodFour.at);
+        await time.increase(periodFour.at);
+        currentTime = await time.latest();
         await farmingContractMock.setNewPeriod(
             periodFour.rewardAmount,
-            periodFour.start,
-            periodFour.end,
+            currentTime + periodFour.start,
+            currentTime + periodFour.end,
             periodFour.lockDuration
         );
         expect(await farmingContractMock.periodCounter()).eq(4);

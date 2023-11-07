@@ -17,16 +17,17 @@ async function wholePeriodOne(
     farmingContract: SMD_v5 | SMD_v5_Mock,
     serhat: SignerWithAddress
 ) {
-    time.increaseTo(periodOne.at);
+    await time.increase(periodOne.at);
+    let currentTime = await time.latest();
     await farmingContract.setNewPeriod(
         periodOne.rewardAmount,
-        periodOne.start,
-        periodOne.end,
+        currentTime + periodOne.start,
+        currentTime + periodOne.end,
         periodOne.lockDuration
     );
 
     // Serhat stakes
-    await time.increaseTo(periodOneUserAction.serhat.stake.at);
+    await time.increase(periodOneUserAction.serhat.stake.at);
     await farmingContract
         .connect(serhat)
         .stake(periodOneUserAction.serhat.stake.amount);
@@ -38,21 +39,22 @@ async function wholePeriodTwo(
     serhat: SignerWithAddress,
     julia: SignerWithAddress
 ) {
-    time.increaseTo(periodTwo.at);
+    await time.increase(periodTwo.at);
+    let currentTime = await time.latest();
     await farmingContract.setNewPeriod(
         periodTwo.rewardAmount,
-        periodTwo.start,
-        periodTwo.end,
+        currentTime + periodTwo.start,
+        currentTime + periodTwo.end,
         periodTwo.lockDuration
     );
 
     // Serhat renews
-    await time.increaseTo(periodTwoUserAction.serhat.renew.at);
+    await time.increase(periodTwoUserAction.serhat.renew.at);
     isMock(farmingContract)
         ? await farmingContract.connect(serhat).workaround_renew()
         : await farmingContract.connect(serhat).renew();
     // Juia stakes
-    await time.increaseTo(periodTwoUserAction.julia.stake.at);
+    await time.increase(periodTwoUserAction.julia.stake.at);
     await farmingContract
         .connect(julia)
         .stake(periodTwoUserAction.julia.stake.amount);

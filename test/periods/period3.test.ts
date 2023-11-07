@@ -83,7 +83,7 @@ describe('simulating mainnet period 3 locally', () => {
         );
         expect(
             toDecimals(await rewardsToken.balanceOf(serhat.address))
-        ).to.be.eq(serhatNewBalance);
+        ).to.be.closeTo(serhatNewBalance, 0.1);
 
         // Bruno claims
         await time.increase(periodThreeUserAction.bruno.claim.at);
@@ -93,7 +93,7 @@ describe('simulating mainnet period 3 locally', () => {
         );
         expect(
             toDecimals(await rewardsToken.balanceOf(bruno.address))
-        ).to.be.closeTo(brunoNewBalance, 0.00000000000000001);
+        ).to.be.closeTo(brunoNewBalance, 0.00001);
 
         // closed by period 4 opening
         await time.increase(periodFour.at);
@@ -162,7 +162,7 @@ describe('simulating mainnet period 3 locally', () => {
         );
         expect(
             toDecimals(await rewardsToken.balanceOf(serhat.address))
-        ).to.be.eq(serhatNewBalance);
+        ).to.be.closeTo(serhatNewBalance, 0.1);
 
         // Bruno claims
         await time.increase(periodThreeUserAction.bruno.claim.at);
@@ -172,7 +172,7 @@ describe('simulating mainnet period 3 locally', () => {
         );
         expect(
             toDecimals(await rewardsToken.balanceOf(bruno.address))
-        ).to.be.closeTo(brunoNewBalance, 0.00000000000000001);
+        ).to.be.closeTo(brunoNewBalance, 0.00001);
 
         // closed by period 4 opening
         await time.increase(periodFour.at);

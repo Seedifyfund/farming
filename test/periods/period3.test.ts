@@ -140,7 +140,7 @@ describe('simulating mainnet period 3 locally', () => {
         const oldBrunoBalance = await rewardsToken.balanceOf(bruno.address);
         //// Serhat renews - get rewards from period 2
         await time.increase(periodThreeUserAction.serhat.renew.at);
-        await farmingContractMock.connect(serhat).renew();
+        await farmingContractMock.connect(serhat).workaround_renew();
         // renew has saved not the previous period 3 as it should
         expect(verifyEmptyStruct(await farmingContract.endAccShare(3)));
         // Serhat received rewards

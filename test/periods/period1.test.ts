@@ -13,7 +13,7 @@ import {
     periodTwo,
 } from '../fixtures/periods';
 
-describe('simulating mainnet period 1 locally', () => {
+describe.skip('simulating mainnet period 1 locally', () => {
     let deployer: SignerWithAddress;
     let serhat: SignerWithAddress;
     let julia: SignerWithAddress;

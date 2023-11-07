@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+/* import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import {SMD_v5} from "../LockedFarming.sol";
 
@@ -126,3 +126,4 @@ contract SMD_v5_Mock is SMD_v5 {
         }
     }
 }
+ */

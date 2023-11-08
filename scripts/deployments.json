@@ -1,0 +1,17 @@
+{
+    "LP_TOKEN": {
+        "arbGoerli": "0x2B7CCBA0225bA5104973821e52C971C0d5882BaA"
+    },
+    "MCKT": {
+        "bsc": "0x0a0fDa2921EC382b7D43e8A2Bb3524a941C767bb",
+        "arbGoerli": "0x2B7CCBA0225bA5104973821e52C971C0d5882BaA",
+        "eth": "0x126E4dcd47c00054f367345202de31dB570Fe2a7",
+        "arb": "0x2B7CCBA0225bA5104973821e52C971C0d5882BaA",
+        "sepolia": "0x394847038eE56af38f3c73b227961a52f0b92b87"
+    },
+    "SFUND": {
+        "bsc": "0x477bC8d23c634C154061869478bce96BE6045D12",
+        "eth": "0x560363BdA52BC6A44CA6C8c9B4a5FadbDa32fa60",
+        "arb": "0x560363BdA52BC6A44CA6C8c9B4a5FadbDa32fa60"
+    }
+}

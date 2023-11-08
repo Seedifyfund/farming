@@ -17,7 +17,15 @@ const config: HardhatUserConfig = {
             initialDate: '01 Jan 1970 00:00:00 GMT', // timestamp at 0
         },
         testnet: {
-            url: `https://eth-sepolia.g.alchemy.com/v2/${secrets.alchemy.apiKey}`,
+            url: `https://eth-sepolia.g.alchemy.com/v2/${secrets.alchemy.apiKey.sepolia}`,
+            accounts: [secrets.accounts.deployer],
+        },
+        eth: {
+            url: `https://eth-mainnet.g.alchemy.com/v2/${secrets.alchemy.apiKey.ethereum}`,
+            accounts: [secrets.accounts.deployer],
+        },
+        arb: {
+            url: `https://arb-mainnet.g.alchemy.com/v2/${secrets.alchemy.apiKey.arbitrum}`,
             accounts: [secrets.accounts.deployer],
         },
     },
@@ -26,6 +34,8 @@ const config: HardhatUserConfig = {
             polygon: secrets?.verification?.polygonscan,
             polygonMumbai: secrets?.verification?.polygonscan,
             sepolia: secrets?.verification?.etherscan,
+            arbitrumOne: secrets?.verification?.arbiscan,
+            ethereum: secrets?.verification?.etherscan,
         },
     },
     solidity: {

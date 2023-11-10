@@ -1,16 +1,20 @@
-import { ethers } from 'hardhat';
+import { ethers, network } from 'hardhat';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const TOKEN_ADDR = process.env.TOKEN_ADDR;
-const REW_TOKEN_ADDR = process.env.REW_TOKEN_ADDR;
+import * as secrets from '../secrets.json';
+import * as deployments from './deployments.json';
 
-// npx hardhat run scripts/LockedFarming.deploy.ts --network bscTest
+// npx hardhat run scripts/LockedFarming.deploy.ts --network arb
 async function main() {
-    const farming = await ethers.deployContract('SMD_v5', [
-        TOKEN_ADDR,
-        REW_TOKEN_ADDR,
-    ]);
+    const LP: string = secrets.LP_TOKEN[network.name];
+    const SFUND: string = deployments.SFUND[network.name];
+
+    console.log(
+        `Deploying LockedFarming to ${network.name}, using LP: ${LP} and SFUND: ${SFUND}`
+    );
+
+    const farming = await ethers.deployContract('SMD_v5', [LP, SFUND]);
 
     console.log(`LockedFarming deployed to ${farming.address}`);
 }

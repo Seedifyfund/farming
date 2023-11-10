@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {SafeERC20} from "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeMath} from "openzeppelin-contracts/utils/math/SafeMath.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import {Context} from "openzeppelin-contracts/utils/Context.sol";
-import {Ownable} from "openzeppelin-contracts/access/Ownable.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Farming
@@ -223,8 +223,11 @@ contract SMD_v5 is Ownable {
 
     /// save the details of the last ended period.
     function __saveOldPeriod() private {
-        // only save old period if it has not been saved before
-        if (endAccShare[periodCounter].startingDate == 0) {
+        // only save old period if it has ended & not been saved before
+        if (
+            block.timestamp > endingDate &&
+            endAccShare[periodCounter].startingDate == 0
+        ) {
             endAccShare[periodCounter] = PeriodDetails(
                 periodCounter,
                 accShare,

@@ -16,11 +16,12 @@ async function main() {
     );
 
     const farming = await ethers.deployContract('SMD_v5', [LP, SFUND]);
+    await farming.waitForDeployment();
 
     console.log(`LockedFarming deployed to ${farming.address}`);
 
-    console.log('Waiting for LockedFarming to be verified...');
-    await farming.wait();
+    console.log('Waiting 20s, then verify contract...');
+    await farming.deploymentTransaction()?.wait(20);
     await hre.run('verify:verify', {
         address: farming.address,
         constructorArguments: [LP, SFUND],

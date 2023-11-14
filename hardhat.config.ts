@@ -35,7 +35,7 @@ const config: HardhatUserConfig = {
             polygonMumbai: secrets?.verification?.polygonscan,
             sepolia: secrets?.verification?.etherscan,
             arbitrumOne: secrets?.verification?.arbiscan,
-            ethereum: secrets?.verification?.etherscan,
+            mainnet: secrets?.verification?.etherscan,
         },
     },
     solidity: {

@@ -1,3 +1,4 @@
+const hre = require('hardhat');
 import { ethers, network } from 'hardhat';
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -15,8 +16,16 @@ async function main() {
     );
 
     const farming = await ethers.deployContract('SMD_v5', [LP, SFUND]);
+    await farming.waitForDeployment();
 
     console.log(`LockedFarming deployed to ${farming.address}`);
+
+    console.log('Waiting 20s, then verify contract...');
+    await farming.deploymentTransaction()?.wait(20);
+    await hre.run('verify:verify', {
+        address: farming.address,
+        constructorArguments: [LP, SFUND],
+    });
 }
 
 // We recommend this pattern to be able to use async/await everywhere

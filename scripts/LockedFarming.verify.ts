@@ -8,7 +8,7 @@ import * as deployments from './deployments.json';
 // npx hardhat run scripts/LockedFarming.verify.ts --network arb
 async function main() {
     await hre.run('verify:verify', {
-        address: '0x55560FBfF60FB3409d21Dd86dF9eD364bEA39fbf',
+        address: '0x92572249d487A99c0ED746ee36aAf22A66C4aB67',
         // see: https://hardhat.org/hardhat-runner/plugins/nomiclabs-hardhat-etherscan#using-programmatically
         constructorArguments: [
             secrets.LP_TOKEN[network.name],

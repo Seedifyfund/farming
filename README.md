@@ -2,10 +2,21 @@
 
 Based on `zok-prelim-report` - audited from this hash `e71fd388f041a46dd18bcfdf34be6ca563c58b79` and deployed on BSC mainnet already.
 
-## TODO
+## Mainnet
 
--   [x] Deploy on ARB Goerli
--   [ ] Once all are tested on testnet, deploy on mainnet
+### Addresses
+
+SFUND on both Ethereum & Arbitrum at: `0x560363BdA52BC6A44CA6C8c9B4a5FadbDa32fa60`
+
+#### Ethereum
+
+-   Farm : https://etherscan.io/address/0x92572249d487a99c0ed746ee36aaf22a66c4ab67
+-   UNI-V2 LP: https://etherscan.io/address/0x8Fb8e9921922d2Ffb529a95D28A0D06d275D7A59
+
+#### Arbitrum
+
+-   Farm : https://arbiscan.io/address/0xd2322397d67026bb1e9bbbcbab30585d19b53565
+-   CAMELOT LP: https://arbiscan.io/address/0x006a9EeEd8160b470F2E10b12e7C9A4EfE1f3157
 
 ## Testnet
 
@@ -27,7 +38,7 @@ To set farming rewards call:
 -   `_end`: Seconds at which the period ends - in UNIX timestamp.
 -   `_lockDuration`: Duration in hours to wait before being able to withdraw.
 
-### Farming
+### Addresses
 
 For easier testing purposes `tokenAddress` and `rewardTokenAddress` is the same addres. This will avoid opening a new pool on testnet and any user can mint any amount of tokens.
 

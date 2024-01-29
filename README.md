@@ -22,6 +22,10 @@ To set farming rewards call:
 -   `_end`: Seconds at which the period ends - in UNIX timestamp.
 -   `_lockDuration`: Duration in hours to wait before being able to withdraw.
 
+## Deployment
+
+To run deployment script, see comments in each deployment script: `./scripts/*.ts`.
+
 ## Mainnet
 
 ### Mainnet Addresses

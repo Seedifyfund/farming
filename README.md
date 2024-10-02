@@ -1,6 +1,10 @@
 # Farming Contract
 
-Based on `zok-prelim-report` - audited from this hash `e71fd388f041a46dd18bcfdf34be6ca563c58b79` and deployed on BSC mainnet already.
+## Audit
+
+-   Latest one: [November 2023 by Certik](https://skyharbor.certik.com/report/0c437504-034a-44f0-98cd-733461100a8e?findingIndex=summary)
+    -   PR [#15](https://github.com/Seedifyfund/farming/pull/15) **audited**, more recent PRs only update _docs & chore_
+    -   [report](https://github.com/user-attachments/files/17230973/REP-final-20231113T200444Z.pdf)
 
 ## Configuration
 

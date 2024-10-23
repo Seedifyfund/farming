@@ -18,6 +18,7 @@ typechain-types/
 
 .bash_history
 .env
+secrets.json
 
 # VS Code
 .vscode-upload.json

@@ -2,14 +2,15 @@ const hre = require('hardhat');
 import { ethers, network } from 'hardhat';
 import * as dotenv from 'dotenv';
 dotenv.config();
+import * as fs from 'fs';
 
-import * as secrets from '../secrets.json';
-import * as deployments from './deployments.json';
+const deployments = JSON.parse(fs.readFileSync('deployments.json', 'utf8'));
 
 // npx hardhat run scripts/LockedFarming.deploy.ts --network arb
 async function main() {
-    const LP: string = secrets.LP_TOKEN[network.name];
-    const SFUND: string = deployments.SFUND[network.name];
+    const LP: string = deployments.contracts[hre.network.name].lpToken;
+    const SFUND: string = deployments.contracts.sfund;
+    let currentBlock: number;
 
     console.log(
         `Deploying LockedFarming to ${network.name}, using LP: ${LP} and SFUND: ${SFUND}`
@@ -20,8 +21,10 @@ async function main() {
 
     console.log(`LockedFarming deployed to ${farming.address}`);
 
-    console.log('Waiting 20s, then verify contract...');
-    await farming.deploymentTransaction()?.wait(20);
+    console.log('Waiting for 5 blocks before verifying...');
+    currentBlock = await ethers.provider.getBlockNumber();
+    while (currentBlock + 5 > (await ethers.provider.getBlockNumber())) {}
+
     await hre.run('verify:verify', {
         address: farming.address,
         constructorArguments: [LP, SFUND],

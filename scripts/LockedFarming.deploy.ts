@@ -19,7 +19,6 @@ async function main() {
     );
 
     const farming = await ethers.deployContract('SMD_v5', [LP, SFUND]);
-    await farming.waitForDeployment();
 
     console.log(`LockedFarming deployed to ${farming.address}`);
 

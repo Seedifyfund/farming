@@ -1,19 +1,19 @@
 {
     "contracts": {
         "arb": {
-            "lpToken": "0x0000000000000000000000000000000000000000"
+            "lpToken": "0x261b38878CccFf4783de8eab039b7A596Fc11982"
         },
         "avax": {
-            "lpToken": "0x0000000000000000000000000000000000000000"
+            "lpToken": "0xF7DE6ddB9434A939E5034fAce04BdCa69D68b521"
         },
         "base": {
-            "lpToken": "0x0000000000000000000000000000000000000000"
+            "lpToken": "0xD64b4ef827fB20003D5e443190261285748f02D3"
         },
         "bsc": {
-            "lpToken": "0x0000000000000000000000000000000000000000"
+            "lpToken": "0x99c396c1406214940F76047Bd72eFd5A68CA263F"
         },
         "eth": {
-            "lpToken": "0x0000000000000000000000000000000000000000"
+            "lpToken": "0x4EC64E7F476bfB6fA62D8e7bd65Df575Fe682f1F"
         },
         "sworld": "0x968bE3F7bfeF0F8eDc3c1aD90232EbB0DA0867aA"
     }

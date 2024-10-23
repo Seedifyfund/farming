@@ -6,6 +6,8 @@ import * as fs from 'fs';
 
 const deployments = JSON.parse(fs.readFileSync('deployments.json', 'utf8'));
 
+const owner = '0x58Ed38ed63F72DAe99e59d4790789309727DDcbf';
+
 // npx hardhat run scripts/LockedFarming.deploy.ts --network arb
 async function main() {
     const LP: string = deployments.contracts[hre.network.name].lpToken;
@@ -29,6 +31,9 @@ async function main() {
         address: farming.address,
         constructorArguments: [LP, SFUND],
     });
+
+    console.log(`Transferring ownership to ${owner}`);
+    await farming.transferOwnership(owner);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
